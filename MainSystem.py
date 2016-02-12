@@ -70,10 +70,10 @@ class Process:
 
 	'''Get the tasknumber/subtasknumber output from preprocessor output'''
 	def getExerciseTask(self,task, rootObject, tasknumber):
-		if task.tag == 'subtask':
-			result = rootObject.find('./task[@n="'+tasknumber+'"]/subtask[@n="'+task.get('n')+'"]')
+		if task.tag == 'task':
+			result = rootObject.find('./taskgroup[@n="'+tasknumber+'"]/task[@n="'+task.get('n')+'"]')
 		else:
-			result = rootObject.find('./task[@n="'+tasknumber+'"]')
+			result = rootObject.find('./taskgroup[@n="'+tasknumber+'"]')
 
 		return result.text if result != None else None
 
@@ -147,16 +147,18 @@ class Process:
 			return 'TimeOut'
 		scoreTable = ''
 		resultTasks = ET.SubElement(self.__resultXMLRoot,'taskDetails')
-		for task in exerciseRoots[self.__exerciseNumber].findall('./exercise[@n="'+self.__labNumber+'"]/task'):
+		for task in exerciseRoots[self.__exerciseNumber].findall('./exercise[@n="'+self.__labNumber+'"]/taskgroup'):
 			noSubTask = True
 			if task.get('reference') != None:
-				task = exerciseRoots[int(task.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]/task[@n="'+task.get('n')+'"]')
+				task = exerciseRoots[int(task.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]/taskgroup[@n="'+task.get('n')+'"]')
 
 
-			resultTask = ET.SubElement(resultTasks,'task',{'n':task.get('n')})
+			resultTask = ET.SubElement(resultTasks,'taskgroup',{'n':task.get('n')})
 
-			for subtask in task.findall('subtask'):
-				resultSubTask = ET.SubElement(resultTask,'subtask',{'n':subtask.get('n')})
+			for subtask in task.findall('task'):
+				resultSubTask = ET.SubElement(resultTask,'task',{'n':subtask.get('n')})
+				if subtask.get('reference') != None:
+					subtask = exerciseRoots[int(subtask.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]/taskgroup[@n="'+task.get('n')+'"]/task[@n="'+subtask.get('n')+'"]')
 				scoreTable += task.get('n') + ':' + subtask.get('n') + ' = ' + self.evaluate(subtask, task.get('n'),resultSubTask) + ' pont\n'
 				noSubTask = False
 
