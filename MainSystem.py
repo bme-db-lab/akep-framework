@@ -39,11 +39,16 @@ class Process:
 		for input in exerciseRoots[exerciseNumber].findall('./exercise[@n="'+labNumber+'"]/inputstream'):
 			self.__scriptInputStream += '\n'+input.text
 
-		self.__scriptInputStream = self.__scriptInputStream.replace('$user',user).replace('$passw', passw).replace('$sol', sol) + '\n'
+		self.__scriptInputStream = self.__scriptInputStream.replace('$user',user).replace('$passw', passw)
+
+
 		#print(self.__scriptInputStream)
 		if sol != None:
+			self.__scriptInputStream = self.__scriptInputStream.replace('$sol', sol) + '\n'
 			sol = open(sol, 'r').read()
 			self.__sourceRoot = ET.fromstring(sol[sol.find('<tasks>'):sol.find('</tasks>')+8].replace('prompt',''))
+		else:
+			self.__scriptInputStream = self.__scriptInputStream + '\n'
 
 		self.__resultXMLRoot = ET.Element('exercise',{'EID':str(exerciseNumber),'LID':str(labNumber), 'User':user})
 
@@ -69,28 +74,25 @@ class Process:
 		self.__PPORoot = ET.fromstring(self.__outs)
 
 	'''Get the tasknumber/subtasknumber output from preprocessor output'''
-	def getExerciseTask(self,task, rootObject, tasknumber):
-		if task.tag == 'task':
-			result = rootObject.find('./taskgroup[@n="'+tasknumber+'"]/task[@n="'+task.get('n')+'"]')
-		else:
-			result = rootObject.find('./taskgroup[@n="'+tasknumber+'"]')
-
+	def getExerciseTask(self,task, rootObject):
+		result = rootObject.find('.//task[@n="'+task.get('n')+'"]')
 		return result.text if result != None else None
 
-	def getSourceOrOutput(self,solItem,task,tasknumber):
+	def getSourceOrOutput(self,solItem,task):
 		if solItem.get('fromSource') == None:
-			output = self.getExerciseTask(task, self.__PPORoot, tasknumber)
+			output = self.getExerciseTask(task, self.__PPORoot)
 		else:
-			output = self.getExerciseTask(task, self.__sourceRoot, tasknumber)
+			output = self.getExerciseTask(task, self.__sourceRoot)
 		return output
 
-	def runEvaluateRutin(self,task,tasknumber,sol,solItem, result, bonus, resultTask):
-		output = self.getSourceOrOutput(solItem,task,tasknumber)
-		output = re.sub('\s+$','',re.sub('^\s+','',output)).lower()
+	def runEvaluateRutin(self,task,sol,solItem, result, bonus, resultTask):
+		output = self.getSourceOrOutput(solItem,task)
+		if output != None:
+			output = re.sub('\s+$','',re.sub('^\s+','',output)).lower()
 		ET.SubElement(resultTask,'output' if solItem.get('fromSource') == None else 'source').text = output
 
 		if task.find('solution') == None:
-			ET.SubElement(resultTask,'input').text = task.find('description').text
+			ET.SubElement(resultTask,'input').text = re.sub('\s+$','',re.sub('^\s+','',task.find('description').text))
 			return
 
 
@@ -100,7 +102,8 @@ class Process:
 			ET.SubElement(resultTask,'input').text = solution
 
 			queueLock.acquire()
-			val = float(sol.get('score')) if getattr(evaluateMode, solItem.get('evaluateMode'))(output,solution) else 0
+			res = getattr(evaluateMode, solItem.get('evaluateMode'))(output,solution)
+			val = float(sol.get('score')) if (solItem.get('negation')==None and res) or (solItem.get('negation') and not res) else 0
 			queueLock.release()
 
 			if sol.get('bonus') != None and bonus == 0:
@@ -110,11 +113,11 @@ class Process:
 		return [result,bonus]
 
 	'''Calc the score'''
-	def evaluate(self,task, tasknumber, resultTask):
+	def evaluate(self,task,resultTask):
 
 		#if manual test
 		if task.find('solution') == None:
-			self.runEvaluateRutin(task,tasknumber,None,task, 0, 0, resultTask)
+			self.runEvaluateRutin(task,None,task, 0, 0, resultTask)
 			return '-'
 
 		result = [0,0]
@@ -122,7 +125,7 @@ class Process:
 		for sol in task.findall('solution'):
 			if len(sol.findall('solutionItem')) == 0:
 				resultSol = ET.SubElement(resultTask,'solution',{'method':sol.get('evaluateMode')})
-				result = self.runEvaluateRutin(task,tasknumber,sol,sol, result[0], result[1], resultSol)
+				result = self.runEvaluateRutin(task,sol,sol, result[0], result[1], resultSol)
 				resultSol.set('result',str(result))
 			else:
 				oldresult = result[0]
@@ -130,7 +133,7 @@ class Process:
 				for solItem in sol.findall('solutionItem'):
 					result[0] = 0
 					resultSubSol = ET.SubElement(resultSol,'subsolution',{'method':solItem.get('evaluateMode')})
-					result = self.runEvaluateRutin(task,tasknumber,sol,solItem, result[0], result[1], resultSubSol)
+					result = self.runEvaluateRutin(task,sol,solItem, result[0], result[1], resultSubSol)
 					resultSubSol.set('result',str(result))
 					if result[0] == 0:
 						break
@@ -147,23 +150,33 @@ class Process:
 			return 'TimeOut'
 		scoreTable = ''
 		resultTasks = ET.SubElement(self.__resultXMLRoot,'taskDetails')
-		for task in exerciseRoots[self.__exerciseNumber].findall('./exercise[@n="'+self.__labNumber+'"]/taskgroup'):
-			noSubTask = True
+		exercise = exerciseRoots[self.__exerciseNumber].find('./exercise[@n="'+self.__labNumber+'"]')
+		tasks = exercise.findall('.//task') if exercise.get('reference') == None else exerciseRoots[int(exercise.get('reference'))].findall('./exercise[@n="'+self.__labNumber+'"]//task')
+		for task in tasks:
 			if task.get('reference') != None:
-				task = exerciseRoots[int(task.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]/taskgroup[@n="'+task.get('n')+'"]')
+				task = exerciseRoots[int(task.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]//task[@id="'+task.get('reference-id')+'"]')
+			resultTask = ET.SubElement(resultTasks,'task',{'n':task.get('n')})
+			scoreTable += task.get('n') + ' = ' + self.evaluate(task,resultTask) + ' pont\n'
 
 
-			resultTask = ET.SubElement(resultTasks,'taskgroup',{'n':task.get('n')})
 
-			for subtask in task.findall('task'):
-				resultSubTask = ET.SubElement(resultTask,'task',{'n':subtask.get('n')})
-				if subtask.get('reference') != None:
-					subtask = exerciseRoots[int(subtask.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]/taskgroup[@n="'+task.get('n')+'"]/task[@n="'+subtask.get('n')+'"]')
-				scoreTable += task.get('n') + ':' + subtask.get('n') + ' = ' + self.evaluate(subtask, task.get('n'),resultSubTask) + ' pont\n'
-				noSubTask = False
+		# for task in exerciseRoots[self.__exerciseNumber].findall('./exercise[@n="'+self.__labNumber+'"]/taskgroup'):
+			# noSubTask = True
+			# if task.get('reference') != None:
+				# task = exerciseRoots[int(task.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]/taskgroup[@n="'+task.get('n')+'"]')
 
-			if noSubTask:
-				scoreTable += task.get('n') + ' = ' + self.evaluate(task, task.get('n'),resultTask) + ' pont\n'
+
+			# resultTask = ET.SubElement(resultTasks,'taskgroup',{'n':task.get('n')})
+
+			# for subtask in task.findall('task'):
+				# resultSubTask = ET.SubElement(resultTask,'task',{'n':subtask.get('n')})
+				# if subtask.get('reference') != None:
+					# subtask = exerciseRoots[int(subtask.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]/taskgroup[@n="'+task.get('n')+'"]/task[@n="'+subtask.get('n')+'"]')
+				# scoreTable += task.get('n') + ':' + subtask.get('n') + ' = ' + self.evaluate(subtask, task.get('n'),resultSubTask) + ' pont\n'
+				# noSubTask = False
+
+			# if noSubTask:
+				# scoreTable += task.get('n') + ' = ' + self.evaluate(task, task.get('n'),resultTask) + ' pont\n'
 
 		ET.SubElement(self.__resultXMLRoot,'scoreTable').text = scoreTable
 		print(ET.tostring(self.__resultXMLRoot))

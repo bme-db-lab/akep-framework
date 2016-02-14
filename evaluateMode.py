@@ -27,12 +27,15 @@ def ColumnsEqualParam(input,param):
 	paramColumns = param.split(',')
 	return set(firstColumns) == set(paramColumns)
 
-def rowNum(input,param):
+def rowNumEq(input,param):
 	return len(input.split('\n')) - 1 == int(param)
+
+def rowNumGrEq(input,param):
+	return len(input.split('\n')) - 1 >= int(param)
 
 def cellData(input,param):
 	rows = input.replace('"','').split('\n')
-	for cell in param.split('|'):
+	for cell in param.split('|||'):
 		cellPos = cell.split(':')[0].split(',')
 		allColumnMode = False
 		if len(cell.split(':')) == 3:
