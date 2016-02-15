@@ -27,10 +27,12 @@ class Process:
 	__sourceRoot = None
 	__timeout = False
 	__resultXMLRoot = None
+	__socket = None
 
 	'''With exerciseNumber, labNumber, username, password arguments fill scriptPath, scriptParameterString, scriptInputStream from exerciseXML root'''
-	def __init__(self, exerciseNumber, labNumber,user,passw,sol):
+	def __init__(self,socket, exerciseNumber, labNumber,user,passw,sol):
 		#fill the defined variable with specific data from exerciseRoots
+		self.__socket = socket
 		self.__labNumber = labNumber
 		self.__exerciseNumber = exerciseNumber
 		self.__scriptPath = exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]').get('scriptPath')
@@ -158,29 +160,8 @@ class Process:
 			resultTask = ET.SubElement(resultTasks,'task',{'n':task.get('n')})
 			scoreTable += task.get('n') + ' = ' + self.evaluate(task,resultTask) + ' pont\n'
 
-
-
-		# for task in exerciseRoots[self.__exerciseNumber].findall('./exercise[@n="'+self.__labNumber+'"]/taskgroup'):
-			# noSubTask = True
-			# if task.get('reference') != None:
-				# task = exerciseRoots[int(task.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]/taskgroup[@n="'+task.get('n')+'"]')
-
-
-			# resultTask = ET.SubElement(resultTasks,'taskgroup',{'n':task.get('n')})
-
-			# for subtask in task.findall('task'):
-				# resultSubTask = ET.SubElement(resultTask,'task',{'n':subtask.get('n')})
-				# if subtask.get('reference') != None:
-					# subtask = exerciseRoots[int(subtask.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]/taskgroup[@n="'+task.get('n')+'"]/task[@n="'+subtask.get('n')+'"]')
-				# scoreTable += task.get('n') + ':' + subtask.get('n') + ' = ' + self.evaluate(subtask, task.get('n'),resultSubTask) + ' pont\n'
-				# noSubTask = False
-
-			# if noSubTask:
-				# scoreTable += task.get('n') + ' = ' + self.evaluate(task, task.get('n'),resultTask) + ' pont\n'
-
 		ET.SubElement(self.__resultXMLRoot,'scoreTable').text = scoreTable
-		print(ET.tostring(self.__resultXMLRoot))
-		return scoreTable
+		self.__socket.send(ET.tostring(self.__resultXMLRoot))
 
 class newWorkerThread (threading.Thread):
 	def __init__(self, threadID, name, q):
@@ -201,7 +182,7 @@ class ClientThread(threading.Thread):
 		self.ip = ip
 		self.port = port
 		self.socket = socket
-		self.socket.settimeout(5)
+		#self.socket.settimeout(5)
 		print("Connect client: "+ip+":"+str(port))
 
 	def run(self):
@@ -223,9 +204,9 @@ class ClientThread(threading.Thread):
 				params = str(data)[2:-3].split(',')
 				#create process with (exerciseNumber,labNumber,loginname,passw, solution ) param
 				if len(params) == 4:
-					proc = Process(int(params[0]), params[1],params[2],params[3],None)
+					proc = Process(self.socket,int(params[0]), params[1],params[2],params[3],None)
 				elif len(params) == 5:
-					proc = Process(int(params[0]), params[1],params[2],params[3],params[4])
+					proc = Process(self.socket,int(params[0]), params[1],params[2],params[3],params[4])
 
 				#put the queue, one thread will process it
 				workQueue.put(proc)
@@ -259,8 +240,7 @@ def process_data(threadName, q):
 			#run it
 			data.run()
 			#send result data to anywhere
-			print('Result:')
-			print(data.evaluateAll())
+			data.evaluateAll()
 		else:
 			time.sleep(0.1)
 
