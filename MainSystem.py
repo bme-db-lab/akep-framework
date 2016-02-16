@@ -41,7 +41,7 @@ class Process:
 		for input in exerciseRoots[exerciseNumber].findall('./exercise[@n="'+labNumber+'"]/inputstream'):
 			self.__scriptInputStream += '\n'+input.text
 
-		self.__scriptInputStream = self.__scriptInputStream.replace('$user',user).replace('$passw', passw)
+		self.__scriptInputStream = self.__scriptInputStream.replace('$schema',user).replace('$user','USERNAME_REPLACE_ME').replace('$passw', 'PASSWORD_REPLACE_ME')
 
 
 		#print(self.__scriptInputStream)
@@ -161,7 +161,10 @@ class Process:
 			scoreTable += task.get('n') + ' = ' + self.evaluate(task,resultTask) + ' pont\n'
 
 		ET.SubElement(self.__resultXMLRoot,'scoreTable').text = scoreTable
+
+		queueLock.acquire()
 		self.__socket.send(ET.tostring(self.__resultXMLRoot))
+		queueLock.release()
 
 class newWorkerThread (threading.Thread):
 	def __init__(self, threadID, name, q):
