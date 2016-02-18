@@ -116,13 +116,13 @@ class Process:
 
 	'''Calc the score'''
 	def evaluate(self,task,resultTask):
-
+		result = [0,0]
 		#if manual test
 		if task.find('solution') == None:
 			self.runEvaluateRutin(task,None,task, 0, 0, resultTask)
-			return '-'
+			return result
 
-		result = [0,0]
+
 
 		for sol in task.findall('solution'):
 			if len(sol.findall('solutionItem')) == 0:
@@ -142,7 +142,7 @@ class Process:
 				if result[0] < oldresult:
 					result[0] = oldresult
 
-		return str(result[0] + result[1])
+		return [result[0] + result[1], float(task.findall('solution')[0].get('score'))]
 
 
 
@@ -150,7 +150,8 @@ class Process:
 	def evaluateAll(self):
 		if self.__timeout:
 			return 'TimeOut'
-		scoreTable = ''
+		scoreResult = 0
+		scoreMax = 0
 		resultTasks = ET.SubElement(self.__resultXMLRoot,'taskDetails')
 		exercise = exerciseRoots[self.__exerciseNumber].find('./exercise[@n="'+self.__labNumber+'"]')
 		tasks = exercise.findall('.//task') if exercise.get('reference') == None else exerciseRoots[int(exercise.get('reference'))].findall('./exercise[@n="'+self.__labNumber+'"]//task')
@@ -158,10 +159,17 @@ class Process:
 			if task.get('reference') != None:
 				task = exerciseRoots[int(task.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]//task[@id="'+task.get('reference-id')+'"]')
 			resultTask = ET.SubElement(resultTasks,'task',{'n':task.get('n')})
-			scoreTable += task.get('n') + ' = ' + self.evaluate(task,resultTask) + ' pont\n'
+			if len(task.findall('./subtask')) == 0:
+				actScore = self.evaluate(task,resultTask)
+				scoreResult += actScore[0]
+				scoreMax += actScore[1]
+			else:
+				for subtask in task.findall('./subtask'):
+					actScore = self.evaluate(subtask,resultTask)
+					scoreResult += actScore[0]
+					scoreMax += actScore[1]
 
-		ET.SubElement(self.__resultXMLRoot,'scoreTable').text = scoreTable
-
+		print(str(scoreMax),'/',str(scoreResult))
 		queueLock.acquire()
 		self.__socket.send(ET.tostring(self.__resultXMLRoot))
 		queueLock.release()
