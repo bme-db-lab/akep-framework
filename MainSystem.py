@@ -91,17 +91,17 @@ class Process:
 		output = self.getSourceOrOutput(solItem,task)
 		if output != None:
 			output = re.sub('\s+$','',re.sub('^\s+','',output)).lower()
-		ET.SubElement(resultTask,'output' if solItem.get('fromSource') == None else 'source').text = output
+		ET.SubElement(resultTask,'Output' if solItem.get('fromSource') == None else 'Source').text = output
 
 		if task.find('solution') == None:
-			ET.SubElement(resultTask,'input').text = re.sub('\s+$','',re.sub('^\s+','',task.find('description').text))
+			ET.SubElement(resultTask,'Required').text = re.sub('\s+$','',re.sub('^\s+','',task.find('description').text))
 			return
 
 
 		if output != None:
 			#remove white space characters from exercises.N.xml specified sol. element text
 			solution = re.sub('\s+',' ',solItem.text).strip(' ').lower()
-			ET.SubElement(resultTask,'input').text = solution
+			ET.SubElement(resultTask,'Required').text = solution
 
 			queueLock.acquire()
 			res = getattr(evaluateMode, solItem.get('evaluateMode'))(output,solution)
@@ -126,15 +126,15 @@ class Process:
 
 		for sol in task.findall('solution'):
 			if len(sol.findall('solutionItem')) == 0:
-				resultSol = ET.SubElement(resultTask,'solution',{'method':sol.get('evaluateMode')})
+				resultSol = ET.SubElement(resultTask,'Solution',{'method':sol.get('evaluateMode')})
 				result = self.runEvaluateRutin(task,sol,sol, result[0], result[1], resultSol)
 				resultSol.set('result',str(result))
 			else:
 				oldresult = result[0]
-				resultSol = ET.SubElement(resultTask,'solution')
+				resultSol = ET.SubElement(resultTask,'Solution')
 				for solItem in sol.findall('solutionItem'):
 					result[0] = 0
-					resultSubSol = ET.SubElement(resultSol,'subsolution',{'method':solItem.get('evaluateMode')})
+					resultSubSol = ET.SubElement(resultSol,'SubSolution',{'method':solItem.get('evaluateMode')})
 					result = self.runEvaluateRutin(task,sol,solItem, result[0], result[1], resultSubSol)
 					resultSubSol.set('result',str(result))
 					if result[0] == 0:
@@ -149,27 +149,81 @@ class Process:
 	'''Create result output with call evaluate function to every task'''
 	def evaluateAll(self):
 		if self.__timeout:
+			queueLock.acquire()
+			self.__resultXMLRoot.set('TimeOut','True')
+			self.__socket.send(ET.tostring(self.__resultXMLRoot))
+			queueLock.release()
 			return 'TimeOut'
+
 		scoreResult = 0
 		scoreMax = 0
 		resultTasks = ET.SubElement(self.__resultXMLRoot,'taskDetails')
 		exercise = exerciseRoots[self.__exerciseNumber].find('./exercise[@n="'+self.__labNumber+'"]')
-		tasks = exercise.findall('.//task') if exercise.get('reference') == None else exerciseRoots[int(exercise.get('reference'))].findall('./exercise[@n="'+self.__labNumber+'"]//task')
+		actExercise = exercise if exercise.get('reference') == None else exerciseRoots[int(exercise.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]')
+
+		prevgroupTaskNode = None
+		groupResultTask = None
+		groupScore = [0,0]
+		taskScore = [0,0]
+		tasks = actExercise.findall('.//task')
+		actindex = 1
+
 		for task in tasks:
+			groupTaskNode = exerciseRoots[self.__exerciseNumber].find('./exercise[@n="'+self.__labNumber+'"]//task[@n="'+task.get('n')+'"]/..')
 			if task.get('reference') != None:
 				task = exerciseRoots[int(task.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]//task[@id="'+task.get('reference-id')+'"]')
-			resultTask = ET.SubElement(resultTasks,'task',{'n':task.get('n')})
+
+			if groupTaskNode == None:
+				resultTask = ET.SubElement(resultTasks,'Task',{'n':task.get('n')})
+				if groupResultTask != None:
+					groupResultTask.set('Score',str(groupScore[0])+'/'+str(groupScore[1]))
+					groupScore = [0,0]
+					prevgroupTaskNode = None
+			elif prevgroupTaskNode != groupTaskNode:
+				if groupResultTask != None:
+					groupResultTask.set('Score',str(groupScore[0])+'/'+str(groupScore[1]))
+				prevgroupTaskNode = groupTaskNode
+				groupResultTask = ET.SubElement(resultTasks,'TaskGroup',{'title':groupTaskNode.get('title')})
+				resultTask = ET.SubElement(groupResultTask,'Task',{'n':task.get('n')})
+				groupScore = [0,0]
+			else:
+				resultTask = ET.SubElement(groupResultTask,'Task',{'n':task.get('n')})
+
+			TaskText = ET.SubElement(resultTask,'TaskText')
+			TaskText.text = task.find('./tasktext').text if task.find('./tasktext') != None else ''
+
 			if len(task.findall('./subtask')) == 0:
+				Description = ET.SubElement(resultTask,'Description')
+				Description.text = task.find('./description').text
 				actScore = self.evaluate(task,resultTask)
+				taskScore[0] = actScore[1]
+				taskScore[1] = actScore[0]
 				scoreResult += actScore[0]
 				scoreMax += actScore[1]
 			else:
 				for subtask in task.findall('./subtask'):
-					actScore = self.evaluate(subtask,resultTask)
+					resultSubTask = ET.SubElement(resultTask,'SubTask',{'n':subtask.get('n')})
+					Description = ET.SubElement(resultSubTask,'Description')
+					Description.text = subtask.find('./description').text
+					TaskText = ET.SubElement(resultSubTask,'TaskText')
+					TaskText.text = subtask.find('./tasktext').text if subtask.find('./tasktext') != None else ''
+					actScore = self.evaluate(subtask,resultSubTask)
+					resultSubTask.set('Score',str(actScore[1])+'/'+str(actScore[0]))
+					taskScore[0] += actScore[1]
+					taskScore[1] += actScore[0]
 					scoreResult += actScore[0]
 					scoreMax += actScore[1]
 
-		print(str(scoreMax),'/',str(scoreResult))
+			resultTask.set('Score',str(taskScore[0])+'/'+str(taskScore[1]))
+			groupScore[0] += taskScore[0]
+			groupScore[1] += taskScore[1]
+			taskScore = [0,0]
+
+			if actindex == len(tasks) and groupResultTask != None:
+				groupResultTask.set('Score',str(groupScore[0])+'/'+str(groupScore[1]))
+			actindex +=1
+
+		self.__resultXMLRoot.set('Score',str(scoreMax)+'/'+str(scoreResult))
 		queueLock.acquire()
 		self.__socket.send(ET.tostring(self.__resultXMLRoot))
 		queueLock.release()
