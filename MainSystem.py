@@ -134,9 +134,9 @@ class Process:
 			queueLock.release()
 
 			#val add to bonusScore or resultScore depends by bonus attribute
-			if sol.get('bonus') != None and bonus == 0:
+			if sol.get('bonus') != None and val > bonus:
 				bonus = val
-			elif sol.get('bonus') == None and result == 0:
+			elif sol.get('bonus') == None and val > result:
 				result = val
 		return [result,bonus]
 
