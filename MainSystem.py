@@ -11,9 +11,15 @@ import re
 import time
 
 #configure
-exerciseXMLsPath = '/exercises/'
+RelativeExerciseXMLsPath = '/exercises/'
 workQueue = queue.Queue(10)
 threadNumber = 3
+exerciseRoots = [None] * 50
+
+#define thread work variable
+exitFlag = False
+threads = []
+queueLock = threading.Lock()
 
 
 '''If socket get a process message it convert to Process object'''
@@ -28,34 +34,39 @@ class Process:
 	__timeout = False
 	__resultXMLRoot = None
 	__socket = None
+	error = False
 
-	'''With exerciseNumber, labNumber, username, password arguments fill scriptPath, scriptParameterString, scriptInputStream from exerciseXML root'''
-	def __init__(self,socket, exerciseNumber, labNumber,user,passw,sol):
-		#fill the defined variable with specific data from exerciseRoots
+	'''Create inputs to preprocessor and initialize result XML root'''
+	def __init__(self,socket, exerciseNumber, labNumber,user,sol):
 		self.__socket = socket
 		self.__labNumber = labNumber
 		self.__exerciseNumber = exerciseNumber
+
+		#fill the defined variable with specific data from exerciseRoots
 		self.__scriptPath = exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]').get('scriptPath')
 		self.__scriptParameterString = exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]').get('arguments')
 		#fill input stream, \n mean enter in console
 		for input in exerciseRoots[exerciseNumber].findall('./exercise[@n="'+labNumber+'"]/inputstream'):
 			self.__scriptInputStream += '\n'+input.text
 
-		self.__scriptInputStream = self.__scriptInputStream.replace('$schema',user).replace('$user','USERNAME_REPLACE_ME').replace('$passw', 'PASSWORD_REPLACE_ME')
+		#replace spific word
+		self.__scriptInputStream = self.__scriptInputStream.replace('$schema',user).replace('$user','DB_USERNAME_REPLACE_ME').replace('$passw', 'PASSWORD_REPLACE_ME')
+		self.__scriptInputStream = self.__scriptInputStream.replace('$sol', sol) + '\n'
 
-
-		#print(self.__scriptInputStream)
 		if sol != None:
-			self.__scriptInputStream = self.__scriptInputStream.replace('$sol', sol) + '\n'
 			sol = open(sol, 'r').read()
-			self.__sourceRoot = ET.fromstring(sol[sol.find('<tasks>'):sol.find('</tasks>')+8].replace('prompt',''))
-		else:
-			self.__scriptInputStream = self.__scriptInputStream + '\n'
+			#student optional sourcecode channel
+			try:
+				self.__sourceRoot = ET.fromstring(sol[sol.find('<tasks>'):sol.find('</tasks>')+8].replace('prompt',''))
+			except:
+				self.error = True
+				return
 
+		#Output result XML to the socket caller
 		self.__resultXMLRoot = ET.Element('exercise',{'EID':str(exerciseNumber),'LID':str(labNumber), 'User':user})
 
 
-	'''Run the given script with given argument and inputstream and save the xml convert output root'''
+	'''Run the given script with given arguments and inputstream'''
 	def run(self):
 		#run background subprocess with given configure
 		print('[Wait '+self.__scriptPath+' script ...]')
@@ -73,13 +84,21 @@ class Process:
 		#Cut everything before <tasks> element and after </tasks> element
 		self.__outs = self.__outs[self.__outs.find('<tasks>'):self.__outs.find('</tasks>')+8]
 
-		self.__PPORoot = ET.fromstring(self.__outs)
+		try:
+			self.__PPORoot = ET.fromstring(self.__outs)
+		except:
+			self.error = True
+			queueLock.acquire()
+			self.__socket.send(b'Student output parse error')
+			queueLock.release()
+			return
 
-	'''Get the tasknumber/subtasknumber output from preprocessor output'''
+	'''Get task output from rootObject (source or preprocessor output channel)'''
 	def getExerciseTask(self,task, rootObject):
 		result = rootObject.find('.//task[@n="'+task.get('n')+'"]')
 		return result.text if result != None else None
 
+	'''Get task output'''
 	def getSourceOrOutput(self,solItem,task):
 		if solItem.get('fromSource') == None:
 			output = self.getExerciseTask(task, self.__PPORoot)
@@ -87,10 +106,14 @@ class Process:
 			output = self.getExerciseTask(task, self.__sourceRoot)
 		return output
 
+	'''Run the given task solutions with specific evaluateMode functions'''
 	def runEvaluateRutin(self,task,sol,solItem, result, bonus, resultTask):
+		#get result from specified channel
 		output = self.getSourceOrOutput(solItem,task)
 		if output != None:
+			#reformed result
 			output = re.sub('\s+$','',re.sub('^\s+','',output)).lower()
+
 		ET.SubElement(resultTask,'Output' if solItem.get('fromSource') == None else 'Source').text = output
 
 		if task.find('solution') == None:
@@ -101,13 +124,16 @@ class Process:
 		if output != None:
 			#remove white space characters from exercises.N.xml specified sol. element text
 			solution = re.sub('\s+',' ',solItem.text).strip(' ').lower()
+
 			ET.SubElement(resultTask,'Required').text = solution
 
 			queueLock.acquire()
+			#get the result from evaluateMode and score it with solution score
 			res = getattr(evaluateMode, solItem.get('evaluateMode'))(output,solution)
 			val = float(sol.get('score')) if (solItem.get('negation')==None and res) or (solItem.get('negation') and not res) else 0
 			queueLock.release()
 
+			#val add to bonusScore or resultScore depends by bonus attribute
 			if sol.get('bonus') != None and bonus == 0:
 				bonus = val
 			elif sol.get('bonus') == None and result == 0:
@@ -121,9 +147,9 @@ class Process:
 		if task.find('solution') == None:
 			self.runEvaluateRutin(task,None,task, 0, 0, resultTask)
 			return result
-
-
-
+		#if automatic test
+		#solutionItems connect together with AND logic
+		#solutions connect together with OR logic
 		for sol in task.findall('solution'):
 			if len(sol.findall('solutionItem')) == 0:
 				resultSol = ET.SubElement(resultTask,'Solution',{'method':sol.get('evaluateMode')})
@@ -146,14 +172,15 @@ class Process:
 
 
 
-	'''Create result output with call evaluate function to every task'''
+	'''Create result output with call evaluate function to every task, listen to reference'''
 	def evaluateAll(self):
 		if self.__timeout:
 			queueLock.acquire()
 			self.__resultXMLRoot.set('TimeOut','True')
 			self.__socket.send(ET.tostring(self.__resultXMLRoot))
 			queueLock.release()
-			return 'TimeOut'
+			print('TimeOut')
+			return
 
 		scoreResult = 0
 		scoreMax = 0
@@ -251,6 +278,7 @@ class ClientThread(threading.Thread):
 		print("Connect client: "+ip+":"+str(port))
 
 	def run(self):
+		global exitFlag
 		while not exitFlag:
 			try:
 				data = self.socket.recv(1024)
@@ -262,17 +290,34 @@ class ClientThread(threading.Thread):
 				break
 			elif data == b'reload\n':
 				queueLock.acquire()
-				exerciseRoots = reloadExerciseXMLs()
+				reloadExerciseXMLs()
 				queueLock.release()
 			elif data != b'':
 				queueLock.acquire()
 				params = str(data)[2:-3].split(',')
-				#create process with (exerciseNumber,labNumber,loginname,passw, solution ) param
-				if len(params) == 4:
-					proc = Process(self.socket,int(params[0]), params[1],params[2],params[3],None)
-				elif len(params) == 5:
-					proc = Process(self.socket,int(params[0]), params[1],params[2],params[3],params[4])
+				if len(params) == 3 or len(params) == 4:
+					try:
+						int(params[0])
+						int(params[1])
+					except:
+						self.socket.send(b'Parse error')
+						queueLock.release()
+						break
+				else:
+					self.socket.send(b'Argument number error')
+					queueLock.release()
+					break
 
+				#create process with (exerciseNumber,labNumber,loginname,solution ) param
+				if len(params) == 3:
+					proc = Process(self.socket,int(params[0]), params[1],params[2],None)
+				elif len(params) == 4:
+					proc = Process(self.socket,int(params[0]), params[1],params[2],params[3])
+
+				if proc.error:
+					self.socket.send(b'Source parse error')
+					queueLock.release()
+					break
 				#put the queue, one thread will process it
 				workQueue.put(proc)
 				queueLock.release()
@@ -283,68 +328,73 @@ class ClientThread(threading.Thread):
 
 
 def reloadExerciseXMLs():
-	exercises = [None] * 50
-	expath = os.path.dirname(os.path.realpath(__file__)) + exerciseXMLsPath
+	global exerciseRoots
+	expath = os.path.dirname(os.path.realpath(__file__)) + RelativeExerciseXMLsPath
 	print('[LOAD Exercises from: '+expath+']')
 	for file in os.listdir(expath):
 		if file.endswith('.xml') and file.startswith('exercises.') and len(file.split('.')) == 3:
 			index = int(file.split('.')[1])
-			exercises[index] = ET.parse(expath + file).getroot()
-			print('Loaded: '+str(index))
-	return exercises
+			try:
+				exerciseRoots[index] = ET.parse(expath + file).getroot()
+				print('Loaded: '+str(index))
+			except:
+				print('XML parse error: '+str(index))
+				if exerciseRoots[index] == None:
+					global exitFlag
+					exitFlag = True
 
 
 def process_data(threadName, q):
+	global exitFlag
 	while not exitFlag:
+		data = None
 		if not workQueue.empty():
 			queueLock.acquire()
 			if not workQueue.empty():
 				#get process
 				data = q.get()
 			queueLock.release()
-			#run it
-			data.run()
-			#send result data to anywhere
-			data.evaluateAll()
+			if data != None:
+				#run it
+				data.run()
+				if not data.error:
+					#evaluateAll and send result back to the socket
+					data.evaluateAll()
 		else:
 			time.sleep(0.1)
 
-#define thread work variable
-exitFlag = False
-threadNumber = 3
-threads = []
-queueLock = threading.Lock()
 
 #load exercise xml file root
-exerciseRoots = reloadExerciseXMLs()
+reloadExerciseXMLs()
 
-#create socket
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serversocket:
-	serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+if not exitFlag:
+	#create socket
+	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serversocket:
+		serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-	#listening on hostname:5555
-	serversocket.bind((socket.gethostname(), 5555))
+		#listening on hostname:5555
+		serversocket.bind((socket.gethostname(), 5555))
 
-	#active socket limit
-	serversocket.listen(5)
-	# Create new threads
-	for threadID in range(1,threadNumber+1):
-		thread = newWorkerThread(threadID, "Thread-"+str(threadID), workQueue)
-		thread.start()
-		threads.append(thread)
+		#active socket limit
+		serversocket.listen(5)
+		# Create new threads
+		for threadID in range(1,threadNumber+1):
+			thread = newWorkerThread(threadID, "Thread-"+str(threadID), workQueue)
+			thread.start()
+			threads.append(thread)
 
-	print('[Serversocket open]')
-	try:
-		while True:
-			(clientsock, (ip, port)) = serversocket.accept()
-			newthread = ClientThread(ip, port, clientsock)
-			newthread.start()
-			threads.append(newthread)
-	except:
-		exitFlag = True
-		serversocket.shutdown(socket.SHUT_RDWR)
-		serversocket.close()
-		print('[Serversocket close]')
+		print('[Serversocket open]')
+		try:
+			while True:
+				(clientsock, (ip, port)) = serversocket.accept()
+				newthread = ClientThread(ip, port, clientsock)
+				newthread.start()
+				threads.append(newthread)
+		except:
+			exitFlag = True
+			serversocket.shutdown(socket.SHUT_RDWR)
+			serversocket.close()
+			print('[Serversocket close]')
 
 
 print('Wait for queue to empty')
