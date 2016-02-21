@@ -1,10 +1,12 @@
 #!/usr/bin/python3
 import re
 
+#Tartalmazza-e a kimenet a paraméterben meadott kifejezéseket (reguláris is lehet) (ÉS,VAGY viszonyban)
+#Multi: kifejezések elválasztása ';' karakterrel
+#használatára a containAnd ill. containOr szolgál
 def contain(input, param, ORType):
 	param = param.split(';')
 	for j in param:
-		#print(j)
 		if re.search(re.sub('\s+','\s*',j), input) == None:
 			return ORType
 	return not ORType
@@ -16,23 +18,32 @@ def containOr(input, param):
 	return contain(input, param, True)
 
 
-
+#Az adott paraméter (mely tartalmazhat reguláris kifejezéseket) illeszkedik-e a kapott bemenetre
 def reqexpToInput(input, param):
 	param = re.sub('\s+','\s*',param)
 	return re.search(param, input)
 
+
+#A kimenet oszlopnevei között megtalálható-e minden a paraméterven megadott ','-vel elválasztott oszlopnév
 def ColumnsEqualParam(input,param):
 	rows = input.split('\n')
 	firstColumns = rows[0].replace('"','').split(',')
 	paramColumns = param.split(',')
 	return set(firstColumns) == set(paramColumns)
 
+#A kimenet sorainak száma megegyezik-e a paraméterben kapott számmal
 def rowNumEq(input,param):
 	return len(input.split('\n')) - 1 == int(param)
 
+#A kimenet sorainak száma >= ? a paraméterben kapott számnál
 def rowNumGrEq(input,param):
 	return len(input.split('\n')) - 1 >= int(param)
 
+#Adott kimeneti cella(cellák|sorok) tartalma megegyezik-e a paraméterben megadott cella(cellák|sorok)-al
+#használat:
+#	* sorszám,oszlopszám:érték|||...|||...
+#	* sorszám,oszlopszám::egész sor|||...|||...
+#	* a ||| az összefűzés, jelentése: minden amit néz ÉS kapcsolatban vizsgálja
 def cellData(input,param):
 	rows = input.replace('"','').split('\n')
 	for cell in param.split('|||'):
