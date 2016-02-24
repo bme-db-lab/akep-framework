@@ -37,7 +37,7 @@ class Process:
 	error = False
 
 	'''Create inputs to preprocessor and initialize result XML root'''
-	def __init__(self,socket, exerciseNumber, labNumber,user,sol):
+	def __init__(self,socket, exerciseNumber, labNumber,schema,sol):
 		self.__socket = socket
 		self.__labNumber = labNumber
 		self.__exerciseNumber = exerciseNumber
@@ -50,8 +50,13 @@ class Process:
 			self.__scriptInputStream += '\n'+input.text
 
 		#replace spific word
-		self.__scriptInputStream = self.__scriptInputStream.replace('$schema',user).replace('$user','DB_USERNAME_REPLACE_ME').replace('$passw', 'PASSWORD_REPLACE_ME')
-		self.__scriptInputStream = self.__scriptInputStream.replace('$sol', sol) + '\n'
+		if labNumber == '1':
+			user = 'ertekelo'
+		else:
+			user = 'DB_USERNAME_REPLACE_ME'
+
+		self.__scriptInputStream = self.__scriptInputStream.replace('$schema',schema).replace('$user',user).replace('$passw', 'PASSWORD_REPLACE_ME')
+		self.__scriptInputStream = self.__scriptInputStream.replace('$sol', sol if sol != None else '') + '\n'
 
 		if sol != None:
 			sol = open(sol, 'r').read()
@@ -63,7 +68,7 @@ class Process:
 				return
 
 		#Output result XML to the socket caller
-		self.__resultXMLRoot = ET.Element('exercise',{'EID':str(exerciseNumber),'LID':str(labNumber), 'User':user})
+		self.__resultXMLRoot = ET.Element('exercise',{'EID':str(exerciseNumber),'LID':str(labNumber), 'User':schema})
 
 
 	'''Run the given script with given arguments and inputstream'''
@@ -90,6 +95,7 @@ class Process:
 			self.error = True
 			queueLock.acquire()
 			self.__socket.send(b'Student output parse error')
+			self.__socket.close()
 			queueLock.release()
 			return
 
@@ -253,6 +259,7 @@ class Process:
 		self.__resultXMLRoot.set('Score',str(scoreMax)+'/'+str(scoreResult))
 		queueLock.acquire()
 		self.__socket.send(ET.tostring(self.__resultXMLRoot))
+		self.__socket.shutdown(socket.SHUT_RDWR)
 		queueLock.release()
 
 class newWorkerThread (threading.Thread):
@@ -322,7 +329,7 @@ class ClientThread(threading.Thread):
 				workQueue.put(proc)
 				queueLock.release()
 
-		self.socket.shutdown(socket.SHUT_RDWR)
+		#self.socket.shutdown(socket.SHUT_RDWR)
 		self.socket.close()
 		print("Disconnect client: "+ip+":"+str(port))
 
