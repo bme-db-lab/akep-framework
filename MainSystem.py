@@ -9,9 +9,10 @@ import contextlib
 import os
 import re
 import time
+import datetime
 
 #configure
-RelativeExerciseXMLsPath = '/exercises/'
+RelativeExerciseXMLsPath = '/../exercises/'
 workQueue = queue.Queue(10)
 threadNumber = 3
 exerciseRoots = [None] * 50
@@ -72,20 +73,20 @@ class Process:
 
 
 	'''Run the given script with given arguments and inputstream'''
-	def run(self):
+	def run(self, threadName):
 		#run background subprocess with given configure
-		print('[Wait '+self.__scriptPath+' script ...]')
+		print(threadName+'=> [Wait '+self.__scriptPath+' script ...]')
 		with subprocess.Popen([self.__scriptPath,self.__scriptParameterString], stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True) as proc:
 			try:
 				self.__outs, self.__errs = proc.communicate(input=self.__scriptInputStream,timeout=60)
 			except subprocess.TimeoutExpired:
 				self.__timeout = True
-				print('[Script timeout]')
+				print(str(datetime.datetime.now()) +'=>  [Script timeout]')
 				proc.kill()
 
 		if self.__timeout:
 			return
-		print('[Script run finish]')
+		print(str(datetime.datetime.now()) + '=>  [Script run finish]')
 		#Cut everything before <tasks> element and after </tasks> element
 		self.__outs = self.__outs[self.__outs.find('<tasks>'):self.__outs.find('</tasks>')+8]
 
@@ -95,7 +96,7 @@ class Process:
 			self.error = True
 			queueLock.acquire()
 			self.__socket.send(b'Student output parse error')
-			self.__socket.close()
+			self.__socket.shutdown(socket.SHUT_RDWR)
 			queueLock.release()
 			return
 
@@ -163,6 +164,7 @@ class Process:
 				resultSol.set('result',str(result))
 			else:
 				oldresult = result[0]
+				notBreak = True
 				resultSol = ET.SubElement(resultTask,'Solution')
 				for solItem in sol.findall('solutionItem'):
 					result[0] = 0
@@ -170,9 +172,11 @@ class Process:
 					result = self.runEvaluateRutin(task,sol,solItem, result[0], result[1], resultSubSol)
 					resultSubSol.set('result',str(result))
 					if result[0] == 0:
-						break
-				if result[0] < oldresult:
+						notBreak = False
+				if result[0] < oldresult and notBreak:
 					result[0] = oldresult
+				elif not notBreak:
+					result[0] = 0
 
 		return [result[0] + result[1], float(task.findall('solution')[0].get('score'))]
 
@@ -184,8 +188,8 @@ class Process:
 			queueLock.acquire()
 			self.__resultXMLRoot.set('TimeOut','True')
 			self.__socket.send(ET.tostring(self.__resultXMLRoot))
+			self.__socket.shutdown(socket.SHUT_RDWR)
 			queueLock.release()
-			print('TimeOut')
 			return
 
 		scoreResult = 0
@@ -282,7 +286,7 @@ class ClientThread(threading.Thread):
 		self.port = port
 		self.socket = socket
 		#self.socket.settimeout(5)
-		print("Connect client: "+ip+":"+str(port))
+		print(str(datetime.datetime.now()) +"=>  Connect client: "+ip+":"+str(port))
 
 	def run(self):
 		global exitFlag
@@ -331,7 +335,7 @@ class ClientThread(threading.Thread):
 
 		#self.socket.shutdown(socket.SHUT_RDWR)
 		self.socket.close()
-		print("Disconnect client: "+ip+":"+str(port))
+		print(str(datetime.datetime.now()) +"=>  Disconnect client: "+ip+":"+str(port))
 
 
 def reloadExerciseXMLs():
@@ -363,7 +367,7 @@ def process_data(threadName, q):
 			queueLock.release()
 			if data != None:
 				#run it
-				data.run()
+				data.run(threadName)
 				if not data.error:
 					#evaluateAll and send result back to the socket
 					data.evaluateAll()

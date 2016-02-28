@@ -57,9 +57,13 @@ def cellData(input,param):
 
 		if cellPos[0] == '*' and cellPos[1] != '*':
 			for row in rows:
+				if not allColumnMode and len(row.split(',')) <= int(cellPos[1]):
+					return False #no enough column
 				if containAnd(row if allColumnMode else row.split(',')[int(cellPos[1])],cellStr):
 					return True
 		elif cellPos[1] == '*' and cellPos[0] != '*':
+			if len(rows) <= int(cellPos[0])+1:
+				return False #no enough row
 			if allColumnMode:
 				return containAnd(rows[int(cellPos[0])+1],cellStr)
 			else:
@@ -71,6 +75,13 @@ def cellData(input,param):
 				for col in row.split(','):
 					if containAnd(row if allColumnMode else col,cellStr):
 						return True
-		elif containAnd(rows[int(cellPos[0])+1] if allColumnMode else rows[int(cellPos[0])+1].split(',')[int(cellPos[1])],cellStr):
-			return True
+		else:
+			if len(rows) <= int(cellPos[0])+1:
+				return False #no enough row
+			if allColumnMode:
+				return containAnd(rows[int(cellPos[0])+1],cellStr)
+			else:
+				if len(rows[int(cellPos[0])+1].split(',')) <= int(cellPos[1]):
+					return False #no enough column
+				return containAnd(rows[int(cellPos[0])+1].split(',')[int(cellPos[1])],cellStr)
 	return False
