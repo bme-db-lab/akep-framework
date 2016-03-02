@@ -19,7 +19,7 @@ def containOr(input, param):
 
 
 #Az adott paraméter (mely tartalmazhat reguláris kifejezéseket) illeszkedik-e a kapott bemenetre
-def reqexpToInput(input, param):
+def regexpToInput(input, param):
 	param = re.sub('\s+','\s*',param)
 	return re.search(param, input)
 
@@ -56,32 +56,49 @@ def cellData(input,param):
 			cellStr = cell.split(':')[1]
 
 		if cellPos[0] == '*' and cellPos[1] != '*':
+			ItContain=False
 			for row in rows:
 				if not allColumnMode and len(row.split(',')) <= int(cellPos[1]):
 					return False #no enough column
 				if containAnd(row if allColumnMode else row.split(',')[int(cellPos[1])],cellStr):
-					return True
+					ItContain = True
+					break
+			if not ItContain:
+				return False
 		elif cellPos[1] == '*' and cellPos[0] != '*':
 			if len(rows) <= int(cellPos[0])+1:
 				return False #no enough row
 			if allColumnMode:
-				return containAnd(rows[int(cellPos[0])+1],cellStr)
+				if not containAnd(rows[int(cellPos[0])+1],cellStr):
+					return False
 			else:
+				ItContain=False
 				for col in rows[int(cellPos[0])+1].split(','):
 					if containAnd(col,cellStr):
-						return True
+						ItContain = True
+						break
+				if not ItContain:
+					return False
 		elif cellPos[1] == '*' and cellPos[0] == '*':
+			ItContain=False
 			for row in rows:
 				for col in row.split(','):
 					if containAnd(row if allColumnMode else col,cellStr):
-						return True
+						ItContain=True
+						break
+				if ItContain:
+					break
+			if not ItContain:
+				return False
 		else:
 			if len(rows) <= int(cellPos[0])+1:
 				return False #no enough row
 			if allColumnMode:
-				return containAnd(rows[int(cellPos[0])+1],cellStr)
+				if not containAnd(rows[int(cellPos[0])+1],cellStr):
+					return False
 			else:
 				if len(rows[int(cellPos[0])+1].split(',')) <= int(cellPos[1]):
 					return False #no enough column
-				return containAnd(rows[int(cellPos[0])+1].split(',')[int(cellPos[1])],cellStr)
-	return False
+				if not containAnd(rows[int(cellPos[0])+1].split(',')[int(cellPos[1])],cellStr):
+					return False
+	return True

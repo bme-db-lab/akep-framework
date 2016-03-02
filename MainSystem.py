@@ -10,9 +10,18 @@ import os
 import re
 import time
 import datetime
+import argparse
+
+parser = argparse.ArgumentParser('AKÉP')
+parser.add_argument('-p','--port', metavar='port', help='Server listener portnumber', default=5555, type=int)
+parser.add_argument('-E','--Epath',metavar='path', help='Relative exercise XMLs path', default='/../exercises/', type=str)
+parser.add_argument("-a","--allnetwork", help="Listening on all interface", action='store_true')
+args = parser.parse_args()
+
+print('Listen: '+('all interface' if args.allnetwork else 'localhost') + ' on port:'+str(args.port))
 
 #configure
-RelativeExerciseXMLsPath = '/../exercises/'
+RelativeExerciseXMLsPath = args.Epath
 workQueue = queue.Queue(10)
 threadNumber = 3
 exerciseRoots = [None] * 50
@@ -35,6 +44,7 @@ class Process:
 	__timeout = False
 	__resultXMLRoot = None
 	__socket = None
+	__scheme = ''
 	error = False
 
 	'''Create inputs to preprocessor and initialize result XML root'''
@@ -42,6 +52,7 @@ class Process:
 		self.__socket = socket
 		self.__labNumber = labNumber
 		self.__exerciseNumber = exerciseNumber
+		self.__scheme = schema
 
 		#fill the defined variable with specific data from exerciseRoots
 		self.__scriptPath = exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]').get('scriptPath')
@@ -75,7 +86,7 @@ class Process:
 	'''Run the given script with given arguments and inputstream'''
 	def run(self, threadName):
 		#run background subprocess with given configure
-		print(threadName+'=> [Wait '+self.__scriptPath+' script ...]')
+		print(self.__scheme+'-'+str(self.__exerciseNumber)+': '+threadName+'=> [Wait '+self.__scriptPath+' script ...]')
 		with subprocess.Popen([self.__scriptPath,self.__scriptParameterString], stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True) as proc:
 			try:
 				self.__outs, self.__errs = proc.communicate(input=self.__scriptInputStream,timeout=60)
@@ -96,6 +107,7 @@ class Process:
 			self.error = True
 			queueLock.acquire()
 			self.__socket.send(b'Student output parse error')
+			print('Student output parse error')
 			self.__socket.shutdown(socket.SHUT_RDWR)
 			queueLock.release()
 			return
@@ -384,7 +396,7 @@ if not exitFlag:
 		serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 		#listening on hostname:5555
-		serversocket.bind((socket.gethostname(), 5555))
+		serversocket.bind(('' if args.allnetwork else socket.gethostname(), args.port))
 
 		#active socket limit
 		serversocket.listen(5)
