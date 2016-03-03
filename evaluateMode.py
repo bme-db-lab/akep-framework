@@ -1,42 +1,60 @@
 #!/usr/bin/python3
 import re
 
+#Visszad egy dictionary-t egy olyan string-ből, melyben ;-vel elválasztott key:value szerepel
+def getDictFromArgs(Args):
+	resDict = {}
+	if Args == None:
+		return resDict
+	list = Args.split(';')
+	for item in list:
+		keyvalue = item.split(':')
+		if keyvalue[0] not in resDict:
+			resDict[keyvalue[0]] = []
+		resDict[keyvalue[0]].append(keyvalue[1])
+	return resDict
+
 #Tartalmazza-e a kimenet a paraméterben meadott kifejezéseket (reguláris is lehet) (ÉS,VAGY viszonyban)
 #Multi: kifejezések elválasztása ';' karakterrel
 #használatára a containAnd ill. containOr szolgál
-def contain(input, param, ORType):
+def contain(input, param, ORType, args):
 	param = param.split(';')
 	for j in param:
-		if re.search(re.sub('\s+','\s*',j), input) == None:
+		#if re.search(re.sub('\s+','\s*',j), input) == None:
+		if regexpToInput(input,j,args) == None:
 			return ORType
 	return not ORType
 
-def containAnd(input, param):
-	return contain(input, param, False)
+def containAnd(input, param, args):
+	return contain(input, param, False,args)
 
-def containOr(input, param):
-	return contain(input, param, True)
+def containOr(input, param, args):
+	return contain(input, param, True, args)
 
 
 #Az adott paraméter (mely tartalmazhat reguláris kifejezéseket) illeszkedik-e a kapott bemenetre
-def regexpToInput(input, param):
+def regexpToInput(input, param, args):
 	param = re.sub('\s+','\s*',param)
+	dictArgs = getDictFromArgs(args)
+	if 'skipchar' in dictArgs:
+		for skipchar in dictArgs['skipchar']:
+			input = input.replace(skipchar,'')
 	return re.search(param, input)
 
 
 #A kimenet oszlopnevei között megtalálható-e minden a paraméterven megadott ','-vel elválasztott oszlopnév
-def ColumnsEqualParam(input,param):
+def ColumnsEqualParam(input,param, args):
 	rows = input.split('\n')
 	firstColumns = rows[0].replace('"','').split(',')
 	paramColumns = param.split(',')
 	return set(firstColumns) == set(paramColumns)
 
 #A kimenet sorainak száma megegyezik-e a paraméterben kapott számmal
-def rowNumEq(input,param):
+def rowNumEq(input,param, args):
 	return len(input.split('\n')) - 1 == int(param)
 
 #A kimenet sorainak száma >= ? a paraméterben kapott számnál
-def rowNumGrEq(input,param):
+def rowNumGrEq(input,param, args):
 	return len(input.split('\n')) - 1 >= int(param)
 
 #Adott kimeneti cella(cellák|sorok) tartalma megegyezik-e a paraméterben megadott cella(cellák|sorok)-al
@@ -44,7 +62,7 @@ def rowNumGrEq(input,param):
 #	* sorszám,oszlopszám:érték|||...|||...
 #	* sorszám,oszlopszám::egész sor|||...|||...
 #	* a ||| az összefűzés, jelentése: minden amit néz ÉS kapcsolatban vizsgálja
-def cellData(input,param):
+def cellData(input,param, args):
 	rows = input.replace('"','').split('\n')
 	for cell in param.split('|||'):
 		cellPos = cell.split(':')[0].split(',')
@@ -60,7 +78,7 @@ def cellData(input,param):
 			for row in rows:
 				if not allColumnMode and len(row.split(',')) <= int(cellPos[1]):
 					return False #no enough column
-				if containAnd(row if allColumnMode else row.split(',')[int(cellPos[1])],cellStr):
+				if containAnd(row if allColumnMode else row.split(',')[int(cellPos[1])],cellStr, args):
 					ItContain = True
 					break
 			if not ItContain:
@@ -69,12 +87,12 @@ def cellData(input,param):
 			if len(rows) <= int(cellPos[0])+1:
 				return False #no enough row
 			if allColumnMode:
-				if not containAnd(rows[int(cellPos[0])+1],cellStr):
+				if not containAnd(rows[int(cellPos[0])+1],cellStr,args):
 					return False
 			else:
 				ItContain=False
 				for col in rows[int(cellPos[0])+1].split(','):
-					if containAnd(col,cellStr):
+					if containAnd(col,cellStr,args):
 						ItContain = True
 						break
 				if not ItContain:
@@ -83,7 +101,7 @@ def cellData(input,param):
 			ItContain=False
 			for row in rows:
 				for col in row.split(','):
-					if containAnd(row if allColumnMode else col,cellStr):
+					if containAnd(row if allColumnMode else col,cellStr, args):
 						ItContain=True
 						break
 				if ItContain:
@@ -94,11 +112,11 @@ def cellData(input,param):
 			if len(rows) <= int(cellPos[0])+1:
 				return False #no enough row
 			if allColumnMode:
-				if not containAnd(rows[int(cellPos[0])+1],cellStr):
+				if not containAnd(rows[int(cellPos[0])+1],cellStr, args):
 					return False
 			else:
 				if len(rows[int(cellPos[0])+1].split(',')) <= int(cellPos[1]):
 					return False #no enough column
-				if not containAnd(rows[int(cellPos[0])+1].split(',')[int(cellPos[1])],cellStr):
+				if not containAnd(rows[int(cellPos[0])+1].split(',')[int(cellPos[1])],cellStr, args):
 					return False
 	return True

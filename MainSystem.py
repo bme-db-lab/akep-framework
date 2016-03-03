@@ -148,7 +148,7 @@ class Process:
 
 			queueLock.acquire()
 			#get the result from evaluateMode and score it with solution score
-			res = getattr(evaluateMode, solItem.get('evaluateMode'))(output,solution)
+			res = getattr(evaluateMode, solItem.get('evaluateMode'))(output,solution,solItem.get('evaluateArgs'))
 			val = float(sol.get('score')) if (solItem.get('negation')==None and res) or (solItem.get('negation') and not res) else 0
 			queueLock.release()
 
