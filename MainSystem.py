@@ -220,7 +220,8 @@ class Process:
 		for task in tasks:
 			groupTaskNode = exerciseRoots[self.__exerciseNumber].find('./exercise[@n="'+self.__labNumber+'"]//task[@n="'+task.get('n')+'"]/..')
 			if task.get('reference') != None:
-				task = exerciseRoots[int(task.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]//task[@id="'+task.get('reference-id')+'"]')
+				for child in exerciseRoots[int(task.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]//task[@id="'+task.get('reference-id')+'"]'):
+					task.append(child)
 
 			if groupTaskNode == None:
 				resultTask = ET.SubElement(resultTasks,'Task',{'n':task.get('n')})

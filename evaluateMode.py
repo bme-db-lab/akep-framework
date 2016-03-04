@@ -8,6 +8,8 @@ def getDictFromArgs(Args):
 		return resDict
 	list = Args.split(';')
 	for item in list:
+		if item == '':
+			break
 		keyvalue = item.split(':')
 		if keyvalue[0] not in resDict:
 			resDict[keyvalue[0]] = []
