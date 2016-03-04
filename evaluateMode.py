@@ -41,7 +41,7 @@ def regexpToInput(input, param, args):
 	if 'skipchar' in dictArgs:
 		for skipchar in dictArgs['skipchar']:
 			input = input.replace(skipchar,'')
-	return re.search(param, input)
+	return re.search(param, input, re.DOTALL)
 
 
 #A kimenet oszlopnevei között megtalálható-e minden a paraméterven megadott ','-vel elválasztott oszlopnév
