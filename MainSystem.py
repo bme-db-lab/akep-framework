@@ -98,7 +98,7 @@ class Process:
 	'''Run the given script with given arguments and inputstream'''
 	def run(self, threadName):
 		#run background subprocess with given configure
-		print(self.__scheme+'-'+str(self.__exerciseNumber)+': '+threadName+'=> [Wait '+self.__scriptPath+' script ...]')
+		print(str(self.__user)+':'+self.__scheme+'-'+str(self.__exerciseNumber)+': '+threadName+'=> [Wait '+self.__scriptPath+' script ...]')
 		with subprocess.Popen([self.__scriptPath,self.__scriptParameterString], stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True) as proc:
 			try:
 				self.__outs, self.__errs = proc.communicate(input=self.__scriptInputStream,timeout=60)
