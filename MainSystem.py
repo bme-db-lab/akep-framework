@@ -22,9 +22,11 @@ print('Listen: '+('all interface' if args.allnetwork else 'localhost') + ' on po
 
 #configure
 RelativeExerciseXMLsPath = args.Epath
-workQueue = queue.Queue(10)
-threadNumber = 3
+workQueue = queue.Queue(100)
+threadNumber = 20
 exerciseRoots = [None] * 50
+exerciseRootsModifiedTime = [None] * 50
+runEvulatorUser = [True] * 20
 
 #define thread work variable
 exitFlag = False
@@ -45,6 +47,8 @@ class Process:
 	__resultXMLRoot = None
 	__socket = None
 	__scheme = ''
+	__user = -1
+
 	error = False
 
 	'''Create inputs to preprocessor and initialize result XML root'''
@@ -62,10 +66,18 @@ class Process:
 			self.__scriptInputStream += '\n'+input.text
 
 		#replace spific word
+		user = ''
 		if labNumber == '1':
 			user = 'ertekelo'
 		else:
-			user = 'DB_USERNAME_REPLACE_ME'
+			for i in range(0, 19):
+				if runEvulatorUser[i]:
+					runEvulatorUser[i] = False
+					self.__user = i
+					user = 'DB_USERNAME_REPLACE_ME_0'+str(i) if i < 10 else 'DB_USERNAME_REPLACE_ME_'+str(i)
+					break
+			if user == '':
+				user = 'DB_USERNAME_REPLACE_ME'
 
 		self.__scriptInputStream = self.__scriptInputStream.replace('$schema',schema).replace('$user',user).replace('$passw', 'PASSWORD_REPLACE_ME')
 		self.__scriptInputStream = self.__scriptInputStream.replace('$sol', sol if sol != None else '') + '\n'
@@ -100,6 +112,11 @@ class Process:
 		print(str(datetime.datetime.now()) + '=>  [Script run finish]')
 		#Cut everything before <tasks> element and after </tasks> element
 		self.__outs = self.__outs[self.__outs.find('<tasks>'):self.__outs.find('</tasks>')+8]
+
+		queueLock.acquire()
+		if self.__user != -1:
+			runEvulatorUser[self.__user] = True
+		queueLock.release()
 
 		try:
 			self.__PPORoot = ET.fromstring(self.__outs)
@@ -316,6 +333,12 @@ class ClientThread(threading.Thread):
 				queueLock.acquire()
 				reloadExerciseXMLs()
 				queueLock.release()
+			elif data == b'stat\n':
+				count = 0
+				for user in runEvulatorUser:
+					if user:
+						count +=1
+				print('Free user: 20/'+str(count))
 			elif data != b'':
 				queueLock.acquire()
 				params = str(data)[2:-3].split(',')
@@ -358,14 +381,16 @@ def reloadExerciseXMLs():
 	for file in os.listdir(expath):
 		if file.endswith('.xml') and file.startswith('exercises.') and len(file.split('.')) == 3:
 			index = int(file.split('.')[1])
-			try:
-				exerciseRoots[index] = ET.parse(expath + file).getroot()
-				print('Loaded: '+str(index))
-			except:
-				print('XML parse error: '+str(index))
-				if exerciseRoots[index] == None:
-					global exitFlag
-					exitFlag = True
+			if exerciseRoots[index] == None or exerciseRootsModifiedTime[index] < os.path.getmtime(expath + file):
+				try:
+					exerciseRoots[index] = ET.parse(expath + file).getroot()
+					exerciseRootsModifiedTime[index] = os.path.getmtime(expath + file)
+					print('Loaded: '+str(index))
+				except:
+					print('XML parse error: '+str(index))
+					if exerciseRoots[index] == None:
+						global exitFlag
+						exitFlag = True
 
 
 def process_data(threadName, q):
