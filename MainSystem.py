@@ -14,14 +14,21 @@ import argparse
 
 parser = argparse.ArgumentParser('AKÉP')
 parser.add_argument('-p','--port', metavar='port', help='Server listener portnumber', default=5555, type=int)
-parser.add_argument('-E','--Epath',metavar='path', help='Relative exercise XMLs path', default='/../exercises/', type=str)
+parser.add_argument('-E','--Epath',metavar='path', help='Relative exercise XMLs path', default='.', type=str)
 parser.add_argument("-a","--allnetwork", help="Listening on all interface", action='store_true')
 args = parser.parse_args()
+
+workDir = os.path.dirname(os.path.realpath(__file__)) + '/' + args.Epath if args.Epath[0] != '/' else args.Epath
+
+if workDir[len(workDir) - 1] == '/':
+	workDir = workDir[:-1]
+
+print('WorkDir: '+workDir)
 
 print('Listen: '+('all interface' if args.allnetwork else 'localhost') + ' on port:'+str(args.port))
 
 #configure
-RelativeExerciseXMLsPath = args.Epath
+
 workQueue = queue.Queue(100)
 threadNumber = 20
 exerciseRoots = [None] * 50
@@ -79,7 +86,8 @@ class Process:
 			if user == '':
 				user = 'DB_USERNAME_REPLACE_ME'
 
-		self.__scriptInputStream = self.__scriptInputStream.replace('$schema',schema).replace('$user',user).replace('$passw', 'PASSWORD_REPLACE_ME')
+
+		self.__scriptInputStream = self.__scriptInputStream.replace('$schema',schema).replace('$user',user).replace('$passw', 'PASSWORD_REPLACE_ME').replace('$workdir', workDir)
 		self.__scriptInputStream = self.__scriptInputStream.replace('$sol', sol if sol != None else '') + '\n'
 
 		if sol != None:
@@ -376,8 +384,8 @@ class ClientThread(threading.Thread):
 
 def reloadExerciseXMLs():
 	global exerciseRoots
-	expath = os.path.dirname(os.path.realpath(__file__)) + RelativeExerciseXMLsPath
-	print('[LOAD Exercises from: '+expath+']')
+	expath = workDir + '/exercises/'
+	#print('[LOAD Exercises from: '+expath+']')
 	for file in os.listdir(expath):
 		if file.endswith('.xml') and file.startswith('exercises.') and len(file.split('.')) == 3:
 			index = int(file.split('.')[1])
