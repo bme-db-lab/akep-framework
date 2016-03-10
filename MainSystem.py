@@ -31,7 +31,7 @@ print('Listen: '+('all interface' if args.allnetwork else 'localhost') + ' on po
 
 workQueue = queue.Queue(100)
 threadNumber = 20
-exerciseRoots = [None] * 50
+exerciseRoots = [None] * 100
 exerciseRootsModifiedTime = [None] * 50
 runEvulatorUser = [True] * 20
 
@@ -65,6 +65,18 @@ class Process:
 		self.__exerciseNumber = exerciseNumber
 		self.__scheme = schema
 
+		print('User: '+schema + ' Lab: '+str(labNumber) + ' ExNu: '+str(exerciseNumber))
+
+		if exerciseRoots[exerciseNumber] == None:
+			print('No exist exercise.N.xml')
+			self.error = True
+			return
+
+		if exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]') == None:
+			print('No exist exercise')
+			self.error = True
+			return
+
 		#fill the defined variable with specific data from exerciseRoots
 		self.__scriptPath = exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]').get('scriptPath')
 		self.__scriptParameterString = exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]').get('arguments')
@@ -91,11 +103,18 @@ class Process:
 		self.__scriptInputStream = self.__scriptInputStream.replace('$sol', sol if sol != None else '') + '\n'
 
 		if sol != None:
-			sol = open(sol, 'r').read()
+			try:
+				sol = open(sol, 'r').read()
+			except:
+				print('Soltuion file error')
+				self.error = True
+				return
+
 			#student optional sourcecode channel
 			try:
 				self.__sourceRoot = ET.fromstring(sol[sol.find('<tasks>'):sol.find('</tasks>')+8].replace('prompt',''))
 			except:
+				print('Solution file has wrong syntax')
 				self.error = True
 				return
 
@@ -173,7 +192,13 @@ class Process:
 
 			queueLock.acquire()
 			#get the result from evaluateMode and score it with solution score
-			res = getattr(evaluateMode, solItem.get('evaluateMode'))(output,solution,solItem.get('evaluateArgs'))
+			try:
+				res = getattr(evaluateMode, solItem.get('evaluateMode'))(output,solution,solItem.get('evaluateArgs'))
+			except:
+				print('Error in evaluateMode: ' + solItem.get('evaluateMode') + ' Task: '+task.get('n'))
+				queueLock.release()
+				return [result,bonus]
+
 			val = float(sol.get('score')) if (solItem.get('negation')==None and res) or (solItem.get('negation') and not res) else 0
 			queueLock.release()
 
