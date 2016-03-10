@@ -49,7 +49,15 @@ def ColumnsEqualParam(input,param, args):
 	rows = input.split('\n')
 	firstColumns = rows[0].replace('"','').split(',')
 	paramColumns = param.split(',')
-	return set(firstColumns) == set(paramColumns)
+	find = 0;
+	for paramColumn in paramColumns:
+		for col in firstColumns:
+			if regexpToInput(col,paramColumn,args):
+				find += 1
+				break
+
+	#return set(firstColumns) == set(paramColumns)
+	return find == len(paramColumns)
 
 #A kimenet sorainak száma megegyezik-e a paraméterben kapott számmal
 def rowNumEq(input,param, args):
