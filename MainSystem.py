@@ -235,10 +235,12 @@ class Process:
 					resultSubSol.set('result',str(result))
 					if result[0] == 0:
 						notBreak = False
-				if result[0] < oldresult and notBreak:
-					result[0] = oldresult
-				elif not notBreak:
+				# if a single solutionItem scored for 0 points, this solution gets 0 points.
+				if not notBreak:
 					result[0] = 0
+				# if the current solution scores less than the previous, then retain the previous score
+				if result[0] < oldresult:
+					result[0] = oldresult
 
 		return [result[0] + result[1], float(task.findall('solution')[0].get('score'))]
 
