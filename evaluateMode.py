@@ -23,8 +23,11 @@ def contain(input, param, ORType, args):
 	param = param.split(';')
 	for j in param:
 		#if re.search(re.sub('\s+','\s*',j), input) == None:
-		if regexpToInput(input,j,args) == None:
-			return ORType
+		result = regexpToInput(input,j,args)
+		if not ORType and result == None:
+			return False
+		if ORType and result != None:
+			return True
 	return not ORType
 
 def containAnd(input, param, args):
