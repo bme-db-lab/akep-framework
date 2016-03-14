@@ -70,6 +70,10 @@ def rowNumEq(input,param, args):
 def rowNumGrEq(input,param, args):
 	return len(input.split('\n')) - 1 >= int(param)
 
+#A kimenet sorainak száma <= ? a paraméterben kapott számnál
+def rowNumLtEq(input,param, args):
+	return len(input.split('\n')) - 1 <= int(param)
+
 #Adott kimeneti cella(cellák|sorok) tartalma megegyezik-e a paraméterben megadott cella(cellák|sorok)-al
 #használat:
 #	* sorszám,oszlopszám:érték|||...|||...
