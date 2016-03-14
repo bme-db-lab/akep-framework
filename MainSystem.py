@@ -16,6 +16,7 @@ import sys
 parser = argparse.ArgumentParser('AKÉP')
 parser.add_argument('-p','--port', metavar='port', help='Server listener portnumber', default=5555, type=int)
 parser.add_argument('-E','--Epath',metavar='path', help='Relative exercise XMLs path', default='.', type=str)
+parser.add_argument('-L','--tooLong',metavar='tooLong', help='If output tooLong AKEP will cut it', default=2000, type=int)
 parser.add_argument("-a","--allnetwork", help="Listening on all interface", action='store_true')
 args = parser.parse_args()
 
@@ -187,7 +188,7 @@ class Process:
 			#reformed result
 			output = re.sub('\s+$','',re.sub('^\s+','',output)).lower()
 
-		ET.SubElement(resultTask,'Output' if solItem.get('fromSource') == None else 'Source').text = output if output == None or len(output) < 1500 else output[0:1499] + ' !WARNING TOO LONG!'
+		ET.SubElement(resultTask,'Output' if solItem.get('fromSource') == None else 'Source').text = output if output == None or len(output) < args.tooLong else output[0:args.tooLong-1] + ' !WARNING TOO LONG!'
 
 		if task.find('solution') == None:
 			ET.SubElement(resultTask,'Required').text = re.sub('\s+$','',re.sub('^\s+','',task.find('description').text))
