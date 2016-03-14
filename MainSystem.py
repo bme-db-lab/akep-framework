@@ -11,6 +11,7 @@ import re
 import time
 import datetime
 import argparse
+import sys
 
 parser = argparse.ArgumentParser('AKÉP')
 parser.add_argument('-p','--port', metavar='port', help='Server listener portnumber', default=5555, type=int)
@@ -89,12 +90,13 @@ class Process:
 		if labNumber == '1':
 			user = 'ertekelo'
 		else:
-			for i in range(0, 19):
-				if runEvulatorUser[i]:
-					runEvulatorUser[i] = False
-					self.__user = i
-					user = 'DB_USERNAME_REPLACE_ME_0'+str(i) if i < 10 else 'DB_USERNAME_REPLACE_ME_'+str(i)
-					break
+			if args.allnetwork:
+				for i in range(0, 19):
+					if runEvulatorUser[i]:
+						runEvulatorUser[i] = False
+						self.__user = i
+						user = 'DB_USERNAME_REPLACE_ME_0'+str(i) if i < 10 else 'DB_USERNAME_REPLACE_ME_'+str(i)
+						break
 			if user == '':
 				user = 'DB_USERNAME_REPLACE_ME'
 
@@ -107,6 +109,7 @@ class Process:
 				sol = open(sol, 'r').read()
 			except:
 				print('Soltuion file error')
+				print(sys.exc_info()[1])
 				self.error = True
 				return
 
@@ -115,12 +118,18 @@ class Process:
 				self.__sourceRoot = ET.fromstring(sol[sol.find('<tasks>'):sol.find('</tasks>')+8].replace('prompt',''))
 			except:
 				print('Solution file has wrong syntax')
+				print(sys.exc_info()[1])
 				self.error = True
 				return
 
 		#Output result XML to the socket caller
 		self.__resultXMLRoot = ET.Element('exercise',{'EID':str(exerciseNumber),'LID':str(labNumber), 'User':schema})
 
+	def userpool(self):
+		queueLock.acquire()
+		if self.__user != -1:
+			runEvulatorUser[self.__user] = True
+		queueLock.release()
 
 	'''Run the given script with given arguments and inputstream'''
 	def run(self, threadName):
@@ -135,15 +144,13 @@ class Process:
 				proc.kill()
 
 		if self.__timeout:
+			self.userpool()
 			return
 		print(str(datetime.datetime.now()) + '=>  [Script run finish]')
 		#Cut everything before <tasks> element and after </tasks> element
 		self.__outs = self.__outs[self.__outs.find('<tasks>'):self.__outs.find('</tasks>')+8]
 
-		queueLock.acquire()
-		if self.__user != -1:
-			runEvulatorUser[self.__user] = True
-		queueLock.release()
+		self.userpool()
 
 		try:
 			self.__PPORoot = ET.fromstring(self.__outs)
