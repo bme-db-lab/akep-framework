@@ -102,20 +102,22 @@ class Process:
 
 
 		self.__scriptInputStream = self.__scriptInputStream.replace('$schema',schema).replace('$user',user).replace('$passw', 'PASSWORD_REPLACE_ME').replace('$workdir', workDir)
-		self.__scriptInputStream = self.__scriptInputStream.replace('$sol', sol if sol != None else '') + '\n'
 
-		if sol != None:
+		if labNumber != '1':
+			self.__scriptInputStream = self.__scriptInputStream.replace('$sol', sol if sol != None else '') + '\n'
+
+		if sol != None and labNumber != '1':
 			try:
 				sol = open(sol, 'r').read()
 			except:
-				print('Soltuion file error')
+				print('Solution file error')
 				print(sys.exc_info()[1])
 				self.error = True
 				return
 
 			#student optional sourcecode channel
 			try:
-				self.__sourceRoot = ET.fromstring(sol[sol.find('<tasks>'):sol.find('</tasks>')+8].replace('prompt',''))
+				self.__sourceRoot = ET.fromstring(re.sub('--.*\n','',sol[sol.find('<tasks>'):sol.find('</tasks>')+8].replace('prompt','')))
 			except:
 				print('Solution file has wrong syntax')
 				print(sys.exc_info()[1])
@@ -159,6 +161,7 @@ class Process:
 			queueLock.acquire()
 			self.__socket.send(b'Student output parse error')
 			print('Student output parse error')
+			print(sys.exc_info()[1])
 			self.__socket.shutdown(socket.SHUT_RDWR)
 			queueLock.release()
 			return
