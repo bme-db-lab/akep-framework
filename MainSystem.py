@@ -187,7 +187,7 @@ class Process:
 			#reformed result
 			output = re.sub('\s+$','',re.sub('^\s+','',output)).lower()
 
-		ET.SubElement(resultTask,'Output' if solItem.get('fromSource') == None else 'Source').text = output
+		ET.SubElement(resultTask,'Output' if solItem.get('fromSource') == None else 'Source').text = output if len(output) < 1500 else output[0:1499] + ' !WARNING TOO LONG!'
 
 		if task.find('solution') == None:
 			ET.SubElement(resultTask,'Required').text = re.sub('\s+$','',re.sub('^\s+','',task.find('description').text))
