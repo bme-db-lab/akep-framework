@@ -72,12 +72,12 @@ class Process:
 
 		print('User: '+schema + ' Lab: '+str(labNumber) + ' ExNu: '+str(exerciseNumber))
 
-		if exerciseRoots[exerciseNumber] == None:
+		if exerciseRoots[exerciseNumber] is None:
 			print('No exist exercise.N.xml')
 			self.error = True
 			return
 
-		if exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]') == None:
+		if exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]') is None:
 			print('No exist exercise')
 			self.error = True
 			return
@@ -108,9 +108,9 @@ class Process:
 		self.__scriptInputStream = self.__scriptInputStream.replace('$schema',schema).replace('$user',user).replace('$passw', 'PASSWORD_REPLACE_ME').replace('$workdir', workDir)
 
 		if labNumber != '1':
-			self.__scriptInputStream = self.__scriptInputStream.replace('$sol', sol if sol != None else '') + '\n'
+			self.__scriptInputStream = self.__scriptInputStream.replace('$sol', sol if sol is not None else '') + '\n'
 
-		if sol != None and labNumber != '1':
+		if sol is not None and labNumber != '1':
 			try:
 				sol = open(sol, 'r').read()
 			except:
@@ -177,11 +177,11 @@ class Process:
 		else:
 			result = rootObject.find('.//task[@n="'+task.get('n')+'"]')
 
-		return result.text if result != None else None
+		return result.text if result is not None else None
 
 	'''Get task output (source or output depending whether fromSource attribute exists in solItem)'''
 	def getSourceOrOutput(self,solItem,task):
-		if solItem != None and solItem.get('fromSource') == None:
+		if solItem is not None and solItem.get('fromSource') is None:
 			return self.getChannelContent(ChannelType.output, task)
 		else:
 			return self.getChannelContent(ChannelType.sourceCode, task)
@@ -191,12 +191,12 @@ class Process:
 	def getChannelContent(self, channel, task, toLowerCase=True):
 		if channel == ChannelType.output:
 			output = self.getExerciseTask(task, self.__PPORoot)
-		elif channel == ChannelType.sourceCode and self.__sourceRoot != None:
+		elif channel == ChannelType.sourceCode and self.__sourceRoot is not None:
 			output = self.getExerciseTask(task, self.__sourceRoot)
 		else:
 			output = None
 
-		if output != None:
+		if output is not None:
 			#reformed result
 			output = re.sub('(^\s+|\s+$)','',output)
 			if toLowerCase:
@@ -209,14 +209,14 @@ class Process:
 		#get result from specified channel
 		output = self.getSourceOrOutput(solItem,task)
 
-		ETappendChildTruncating(resultTask, 'Output' if solItem.get('fromSource') == None else 'Source', output, args.tooLong)
+		ETappendChildTruncating(resultTask, 'Output' if solItem.get('fromSource') is None else 'Source', output, args.tooLong)
 
-		if task.find('solution') == None:
+		if task.find('solution') is None:
 			ET.SubElement(resultTask,'Required').text = re.sub('\s+$','',re.sub('^\s+','',task.find('description').text))
 			return
 
 
-		if output != None:
+		if output is not None:
 			#remove white space characters from exercises.N.xml specified sol. element text
 			solution = re.sub('\s+',' ',solItem.text).strip(' ').lower()
 
@@ -235,9 +235,9 @@ class Process:
 			queueLock.release()
 
 			#val add to bonusScore or resultScore depends by bonus attribute
-			if sol.get('bonus') != None and val > bonus:
+			if sol.get('bonus') is not None and val > bonus:
 				bonus = val
-			elif sol.get('bonus') == None and val > result:
+			elif sol.get('bonus') is None and val > result:
 				result = val
 		return [result,bonus]
 
@@ -245,7 +245,7 @@ class Process:
 	def evaluate(self,task,resultTask):
 		result = [0,0]
 		#if manual test
-		if task.find('solution') == None:
+		if task.find('solution') is None:
 			self.runEvaluateRutin(task,None,task, 0, 0, resultTask)
 			return result
 		#if automatic test
@@ -292,7 +292,7 @@ class Process:
 		scoreMax = 0
 		resultTasks = ET.SubElement(self.__resultXMLRoot,'taskDetails')
 		exercise = exerciseRoots[self.__exerciseNumber].find('./exercise[@n="'+self.__labNumber+'"]')
-		actExercise = exercise if exercise.get('reference') == None else exerciseRoots[int(exercise.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]')
+		actExercise = exercise if exercise.get('reference') is None else exerciseRoots[int(exercise.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]')
 
 		prevgroupTaskNode = None
 		groupResultTask = None
@@ -303,18 +303,18 @@ class Process:
 
 		for task in tasks:
 			groupTaskNode = exerciseRoots[self.__exerciseNumber].find('./exercise[@n="'+self.__labNumber+'"]//task[@n="'+task.get('n')+'"]/..')
-			if task.get('reference') != None:
+			if task.get('reference') is not None:
 				for child in exerciseRoots[int(task.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]//task[@id="'+task.get('reference-id')+'"]'):
 					task.append(child)
 
-			if groupTaskNode == None:
+			if groupTaskNode is None:
 				resultTask = ET.SubElement(resultTasks,'Task',{'n':task.get('n')})
-				if groupResultTask != None:
+				if groupResultTask is not None:
 					groupResultTask.set('Score',str(groupScore[0])+'/'+str(groupScore[1]))
 					groupScore = [0,0]
 					prevgroupTaskNode = None
 			elif prevgroupTaskNode != groupTaskNode:
-				if groupResultTask != None:
+				if groupResultTask is not None:
 					groupResultTask.set('Score',str(groupScore[0])+'/'+str(groupScore[1]))
 				prevgroupTaskNode = groupTaskNode
 				groupResultTask = ET.SubElement(resultTasks,'TaskGroup',{'title':groupTaskNode.get('title')})
@@ -324,7 +324,7 @@ class Process:
 				resultTask = ET.SubElement(groupResultTask,'Task',{'n':task.get('n')})
 
 			TaskText = ET.SubElement(resultTask,'TaskText')
-			TaskText.text = task.find('./tasktext').text if task.find('./tasktext') != None else ''
+			TaskText.text = task.find('./tasktext').text if task.find('./tasktext') is not None else ''
 
 			if len(task.findall('./subtask')) == 0:
 				Description = ET.SubElement(resultTask,'Description')
@@ -344,7 +344,7 @@ class Process:
 					Description = ET.SubElement(resultSubTask,'Description')
 					Description.text = subtask.find('./description').text
 					TaskText = ET.SubElement(resultSubTask,'TaskText')
-					TaskText.text = subtask.find('./tasktext').text if subtask.find('./tasktext') != None else ''
+					TaskText.text = subtask.find('./tasktext').text if subtask.find('./tasktext') is not None else ''
 					# add source code here
 					output = self.getChannelContent(ChannelType.sourceCode, subtask, False)
 					ETappendChildTruncating(resultSubTask, 'Source', output, args.tooLong)
@@ -361,7 +361,7 @@ class Process:
 			groupScore[1] += taskScore[1]
 			taskScore = [0,0]
 
-			if actindex == len(tasks) and groupResultTask != None:
+			if actindex == len(tasks) and groupResultTask is not None:
 				groupResultTask.set('Score',str(groupScore[0])+'/'+str(groupScore[1]))
 			actindex +=1
 
@@ -456,14 +456,14 @@ def reloadExerciseXMLs():
 	for file in os.listdir(expath):
 		if file.endswith('.xml') and file.startswith('exercises.') and len(file.split('.')) == 3:
 			index = int(file.split('.')[1])
-			if exerciseRoots[index] == None or exerciseRootsModifiedTime[index] < os.path.getmtime(expath + file):
+			if exerciseRoots[index] is None or exerciseRootsModifiedTime[index] < os.path.getmtime(expath + file):
 				try:
 					exerciseRoots[index] = ET.parse(expath + file).getroot()
 					exerciseRootsModifiedTime[index] = os.path.getmtime(expath + file)
 					print('Loaded: '+str(index))
 				except:
 					print('XML parse error: '+str(index))
-					if exerciseRoots[index] == None:
+					if exerciseRoots[index] is None:
 						global exitFlag
 						exitFlag = True
 
@@ -478,7 +478,7 @@ def process_data(threadName, q):
 				#get process
 				data = q.get()
 			queueLock.release()
-			if data != None:
+			if data is not None:
 				#run it
 				data.run(threadName)
 				if not data.error:

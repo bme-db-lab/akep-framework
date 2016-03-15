@@ -4,7 +4,7 @@ import re
 #Visszad egy dictionary-t egy olyan string-ből, melyben ;-vel elválasztott key:value szerepel
 def getDictFromArgs(Args):
 	resDict = {}
-	if Args == None:
+	if Args is None:
 		return resDict
 	list = Args.split(';')
 	for item in list:
@@ -22,11 +22,11 @@ def getDictFromArgs(Args):
 def contain(input, param, ORType, args):
 	param = param.split(';')
 	for j in param:
-		#if re.search(re.sub('\s+','\s*',j), input) == None:
+		#if re.search(re.sub('\s+','\s*',j), input) is None:
 		result = regexpToInput(input,j,args)
-		if not ORType and result == None:
+		if not ORType and result is None:
 			return False
-		if ORType and result != None:
+		if ORType and result is not None:
 			return True
 	return not ORType
 
