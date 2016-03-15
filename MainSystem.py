@@ -188,7 +188,12 @@ class Process:
 			#reformed result
 			output = re.sub('\s+$','',re.sub('^\s+','',output)).lower()
 
-		ET.SubElement(resultTask,'Output' if solItem.get('fromSource') == None else 'Source').text = output if output == None or len(output) < args.tooLong else output[0:args.tooLong-1] + ' !WARNING TOO LONG!'
+		ChET = ET.SubElement(resultTask,'Output' if solItem.get('fromSource') == None else 'Source')
+		ChET.text = output if output == None or len(output) < args.tooLong else output[0:args.tooLong-1] + ' !WARNING TOO LONG!'
+		if len(output) < args.tooLong:
+			# add attributes to indicate warning
+			ChET.set('warning', 'Too long: ' + str( len(output) ) + 'chars. Truncated at ' + str(args.tooLong) + ' characters.')
+			ChET.set('warning-too-long', 'true')
 
 		if task.find('solution') == None:
 			ET.SubElement(resultTask,'Required').text = re.sub('\s+$','',re.sub('^\s+','',task.find('description').text))
