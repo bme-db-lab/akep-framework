@@ -13,6 +13,8 @@ import datetime
 import argparse
 import sys
 
+from util.channel import ChannelType
+
 parser = argparse.ArgumentParser('AKÉP')
 parser.add_argument('-p','--port', metavar='port', help='Server listener portnumber', default=5555, type=int)
 parser.add_argument('-E','--Epath',metavar='path', help='Relative exercise XMLs path', default='.', type=str)
@@ -172,12 +174,18 @@ class Process:
 		result = rootObject.find('.//task[@n="'+task.get('n')+'"]')
 		return result.text if result != None else None
 
-	'''Get task output'''
+	'''Get task output (source or output depending whether fromSource attribute exists in solItem)'''
 	def getSourceOrOutput(self,solItem,task):
-		if solItem.get('fromSource') == None:
+		return self.getChannelContent(ChannelType.output if solItem.get('fromSource') == None else ChannelType.sourceCode, task)
+
+	'''Get task content from channel. channel is passed as a ChannelType enum member.'''
+	def getChannelContent(self,channel,task):
+		if channel == ChannelType.output:
 			output = self.getExerciseTask(task, self.__PPORoot)
-		else:
+		elif channel == ChannelType.sourceCode:
 			output = self.getExerciseTask(task, self.__sourceRoot)
+		else:
+			output = None
 		return output
 
 	'''Run the given task solutions with specific evaluateMode functions'''
