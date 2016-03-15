@@ -14,6 +14,7 @@ import argparse
 import sys
 
 from util.channel import ChannelType
+from util.xmlHelper import *
 
 parser = argparse.ArgumentParser('AKÉP')
 parser.add_argument('-p','--port', metavar='port', help='Server listener portnumber', default=5555, type=int)
@@ -171,37 +172,44 @@ class Process:
 
 	'''Get task output from rootObject (source or preprocessor output channel)'''
 	def getExerciseTask(self,task, rootObject):
-		result = rootObject.find('.//task[@n="'+task.get('n')+'"]')
+		if task.tag == 'subtask':
+			result = rootObject.find('.//subtask[@n="'+task.get('n')+'"]')
+		else:
+			result = rootObject.find('.//task[@n="'+task.get('n')+'"]')
+
 		return result.text if result != None else None
 
 	'''Get task output (source or output depending whether fromSource attribute exists in solItem)'''
 	def getSourceOrOutput(self,solItem,task):
-		return self.getChannelContent(ChannelType.output if solItem.get('fromSource') == None else ChannelType.sourceCode, task)
+		if solItem != None and solItem.get('fromSource') == None:
+			return self.getChannelContent(ChannelType.output, task)
+		else:
+			return self.getChannelContent(ChannelType.sourceCode, task)
 
-	'''Get task content from channel. channel is passed as a ChannelType enum member.'''
-	def getChannelContent(self,channel,task):
+
+	'''Get task content from channel. channel is passed as a ChannelType enum member. Whitespaces are removed from contents beginning and end (trimmed).'''
+	def getChannelContent(self, channel, task, toLowerCase=True):
 		if channel == ChannelType.output:
 			output = self.getExerciseTask(task, self.__PPORoot)
-		elif channel == ChannelType.sourceCode:
+		elif channel == ChannelType.sourceCode and self.__sourceRoot != None:
 			output = self.getExerciseTask(task, self.__sourceRoot)
 		else:
 			output = None
+
+		if output != None:
+			#reformed result
+			output = re.sub('(^\s+|\s+$)','',output)
+			if toLowerCase:
+				output = output.lower()
+
 		return output
 
 	'''Run the given task solutions with specific evaluateMode functions'''
 	def runEvaluateRutin(self,task,sol,solItem, result, bonus, resultTask):
 		#get result from specified channel
 		output = self.getSourceOrOutput(solItem,task)
-		if output != None:
-			#reformed result
-			output = re.sub('\s+$','',re.sub('^\s+','',output)).lower()
 
-		ChET = ET.SubElement(resultTask,'Output' if solItem.get('fromSource') == None else 'Source')
-		ChET.text = output if output == None or len(output) < args.tooLong else output[0:args.tooLong-1] + ' !WARNING TOO LONG!'
-		if len(output) < args.tooLong:
-			# add attributes to indicate warning
-			ChET.set('warning', 'Too long: ' + str( len(output) ) + 'chars. Truncated at ' + str(args.tooLong) + ' characters.')
-			ChET.set('warning-too-long', 'true')
+		ETappendChildTruncating(resultTask, 'Output' if solItem.get('fromSource') == None else 'Source', output, args.tooLong)
 
 		if task.find('solution') == None:
 			ET.SubElement(resultTask,'Required').text = re.sub('\s+$','',re.sub('^\s+','',task.find('description').text))
@@ -321,6 +329,10 @@ class Process:
 			if len(task.findall('./subtask')) == 0:
 				Description = ET.SubElement(resultTask,'Description')
 				Description.text = task.find('./description').text
+				# add source code here
+				output = self.getChannelContent(ChannelType.sourceCode, task, False)
+				ETappendChildTruncating(resultTask, 'Source', output, args.tooLong)
+				# go on to scoring
 				actScore = self.evaluate(task,resultTask)
 				taskScore[0] = actScore[1]
 				taskScore[1] = actScore[0]
@@ -333,6 +345,10 @@ class Process:
 					Description.text = subtask.find('./description').text
 					TaskText = ET.SubElement(resultSubTask,'TaskText')
 					TaskText.text = subtask.find('./tasktext').text if subtask.find('./tasktext') != None else ''
+					# add source code here
+					output = self.getChannelContent(ChannelType.sourceCode, subtask, False)
+					ETappendChildTruncating(resultSubTask, 'Source', output, args.tooLong)
+					# go on to scoring
 					actScore = self.evaluate(subtask,resultSubTask)
 					resultSubTask.set('Score',str(actScore[1])+'/'+str(actScore[0]))
 					taskScore[0] += actScore[1]
