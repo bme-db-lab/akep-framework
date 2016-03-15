@@ -5,7 +5,6 @@ import evaluateMode
 import queue
 import threading
 import socket
-import contextlib
 import os
 import re
 import time
