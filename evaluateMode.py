@@ -20,15 +20,8 @@ def getDictFromArgs(Args):
 #Multi: kifejezések elválasztása ';' karakterrel
 #használatára a containAnd ill. containOr szolgál
 def contain(input, param, ORType, args):
-	param = param.split(';')
-	for j in param:
-		#if re.search(re.sub('\s+','\s*',j), input) is None:
-		result = regexpToInput(input,j,args)
-		if not ORType and result is None:
-			return False
-		if ORType and result is not None:
-			return True
-	return not ORType
+	f = any if ORType else all
+	return f(regexpToInput(input, j, args) for j in param.split(';'))
 
 def containAnd(input, param, args):
 	return contain(input, param, False,args)
