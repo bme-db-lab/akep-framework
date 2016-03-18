@@ -1,17 +1,16 @@
 #!/usr/bin/python3
 import re
+import collections
 
 #Visszad egy dictionary-t egy olyan string-ből, melyben ;-vel elválasztott key:value szerepel
 def getDictFromArgs(Args):
-	resDict = {}
+	resDict = collections.defaultdict(list)
 	if Args is None:
 		return resDict
 	items = Args.split(';')
 	for item in filter(None, items): # üres elemek kihagyása
-		keyvalue = item.split(':')
-		if keyvalue[0] not in resDict:
-			resDict[keyvalue[0]] = []
-		resDict[keyvalue[0]].append(keyvalue[1])
+		key, value = item.split(':')
+		resDict[key].append(value)
 	return resDict
 
 #Tartalmazza-e a kimenet a paraméterben meadott kifejezéseket (reguláris is lehet) (ÉS,VAGY viszonyban)
