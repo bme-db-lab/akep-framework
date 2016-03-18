@@ -31,9 +31,8 @@ def containOr(input, param, args):
 def regexpToInput(input, param, args):
 	param = re.sub('\s+','\s*',param)
 	dictArgs = getDictFromArgs(args)
-	if 'skipchar' in dictArgs:
-		for skipchar in dictArgs['skipchar']:
-			input = input.replace(skipchar,'')
+	for skipchar in dictArgs['skipchar']:
+		input = input.replace(skipchar,'')
 	return re.search(param, input, re.DOTALL)
 
 
