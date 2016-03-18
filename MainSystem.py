@@ -131,10 +131,9 @@ class Process:
 		self.__resultXMLRoot = ET.Element('exercise',{'EID':str(exerciseNumber),'LID':str(labNumber), 'User':schema})
 
 	def userpool(self):
-		queueLock.acquire()
-		if self.__user != -1:
-			runEvulatorUser[self.__user] = True
-		queueLock.release()
+		with queueLock:
+			if self.__user != -1:
+				runEvulatorUser[self.__user] = True
 
 	'''Run the given script with given arguments and inputstream'''
 	def run(self, threadName):
@@ -161,12 +160,11 @@ class Process:
 			self.__PPORoot = ET.fromstring(self.__outs)
 		except:
 			self.error = True
-			queueLock.acquire()
-			self.__socket.send(b'Student output parse error')
-			print('Student output parse error')
-			print(sys.exc_info()[1])
-			self.__socket.shutdown(socket.SHUT_RDWR)
-			queueLock.release()
+			with queueLock:
+				self.__socket.send(b'Student output parse error')
+				print('Student output parse error')
+				print(sys.exc_info()[1])
+				self.__socket.shutdown(socket.SHUT_RDWR)
 			return
 
 	'''Get task output from rootObject (source or preprocessor output channel)'''
@@ -221,17 +219,15 @@ class Process:
 
 			ET.SubElement(resultTask,'Required').text = solution
 
-			queueLock.acquire()
-			#get the result from evaluateMode and score it with solution score
-			try:
-				res = getattr(evaluateMode, solItem.get('evaluateMode'))(output,solution,solItem.get('evaluateArgs'))
-			except:
-				print('Error in evaluateMode: ' + solItem.get('evaluateMode') + ' Task: '+task.get('n'))
-				queueLock.release()
-				return [result,bonus]
+			with queueLock:
+				#get the result from evaluateMode and score it with solution score
+				try:
+					res = getattr(evaluateMode, solItem.get('evaluateMode'))(output,solution,solItem.get('evaluateArgs'))
+				except:
+					print('Error in evaluateMode: ' + solItem.get('evaluateMode') + ' Task: '+task.get('n'))
+					return [result,bonus]
 
-			val = float(sol.get('score')) if (solItem.get('negation')==None and res) or (solItem.get('negation') and not res) else 0
-			queueLock.release()
+				val = float(sol.get('score')) if (solItem.get('negation')==None and res) or (solItem.get('negation') and not res) else 0
 
 			#val add to bonusScore or resultScore depends by bonus attribute
 			if sol.get('bonus') is not None and val > bonus:
@@ -280,11 +276,10 @@ class Process:
 	'''Create result output with call evaluate function to every task, listen to reference'''
 	def evaluateAll(self):
 		if self.__timeout:
-			queueLock.acquire()
-			self.__resultXMLRoot.set('TimeOut','True')
-			self.__socket.send(ET.tostring(self.__resultXMLRoot))
-			self.__socket.shutdown(socket.SHUT_RDWR)
-			queueLock.release()
+			with queueLock:
+				self.__resultXMLRoot.set('TimeOut','True')
+				self.__socket.send(ET.tostring(self.__resultXMLRoot))
+				self.__socket.shutdown(socket.SHUT_RDWR)
 			return
 
 		scoreResult = 0
@@ -365,10 +360,9 @@ class Process:
 			actindex +=1
 
 		self.__resultXMLRoot.set('Score',str(scoreMax)+'/'+str(scoreResult))
-		queueLock.acquire()
-		self.__socket.send(ET.tostring(self.__resultXMLRoot))
-		self.__socket.shutdown(socket.SHUT_RDWR)
-		queueLock.release()
+		with queueLock:
+			self.__socket.send(ET.tostring(self.__resultXMLRoot))
+			self.__socket.shutdown(socket.SHUT_RDWR)
 
 class newWorkerThread (threading.Thread):
 	def __init__(self, threadID, name, q):
@@ -404,9 +398,8 @@ class ClientThread(threading.Thread):
 			if data == b'exit\n' or not data:
 				break
 			elif data == b'reload\n':
-				queueLock.acquire()
-				reloadExerciseXMLs()
-				queueLock.release()
+				with queueLock:
+					reloadExerciseXMLs()
 			elif data == b'stat\n':
 				count = 0
 				for user in runEvulatorUser:
@@ -414,34 +407,30 @@ class ClientThread(threading.Thread):
 						count +=1
 				print('Free user: 20/'+str(count))
 			elif data != b'':
-				queueLock.acquire()
-				params = str(data)[2:-3].split(',')
-				if len(params) == 3 or len(params) == 4:
-					try:
-						int(params[0])
-						int(params[1])
-					except:
-						self.socket.send(b'Parse error')
-						queueLock.release()
+				with queueLock:
+					params = str(data)[2:-3].split(',')
+					if len(params) == 3 or len(params) == 4:
+						try:
+							int(params[0])
+							int(params[1])
+						except:
+							self.socket.send(b'Parse error')
+							break
+					else:
+						self.socket.send(b'Argument number error')
 						break
-				else:
-					self.socket.send(b'Argument number error')
-					queueLock.release()
-					break
 
-				#create process with (exerciseNumber,labNumber,loginname,solution ) param
-				if len(params) == 3:
-					proc = Process(self.socket,int(params[0]), params[1],params[2],None)
-				elif len(params) == 4:
-					proc = Process(self.socket,int(params[0]), params[1],params[2],params[3])
+					#create process with (exerciseNumber,labNumber,loginname,solution ) param
+					if len(params) == 3:
+						proc = Process(self.socket,int(params[0]), params[1],params[2],None)
+					elif len(params) == 4:
+						proc = Process(self.socket,int(params[0]), params[1],params[2],params[3])
 
-				if proc.error:
-					self.socket.send(b'Source parse error')
-					queueLock.release()
-					break
-				#put the queue, one thread will process it
-				workQueue.put(proc)
-				queueLock.release()
+					if proc.error:
+						self.socket.send(b'Source parse error')
+						break
+					#put the queue, one thread will process it
+					workQueue.put(proc)
 
 		#self.socket.shutdown(socket.SHUT_RDWR)
 		self.socket.close()
@@ -472,11 +461,10 @@ def process_data(threadName, q):
 	while not exitFlag:
 		data = None
 		if not workQueue.empty():
-			queueLock.acquire()
-			if not workQueue.empty():
-				#get process
-				data = q.get()
-			queueLock.release()
+			with queueLock:
+				if not workQueue.empty():
+					#get process
+					data = q.get()
 			if data is not None:
 				#run it
 				data.run(threadName)
