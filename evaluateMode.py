@@ -6,10 +6,8 @@ def getDictFromArgs(Args):
 	resDict = {}
 	if Args is None:
 		return resDict
-	list = Args.split(';')
-	for item in list:
-		if item == '':
-			break
+	items = Args.split(';')
+	for item in filter(None, items): # üres elemek kihagyása
 		keyvalue = item.split(':')
 		if keyvalue[0] not in resDict:
 			resDict[keyvalue[0]] = []
