@@ -12,7 +12,6 @@ import datetime
 import argparse
 import sys
 
-from util.channel import ChannelType
 from util.xmlHelper import *
 
 parser = argparse.ArgumentParser('AKÉP')
@@ -47,18 +46,14 @@ queueLock = threading.Lock()
 
 '''If socket get a process message it convert to Process object'''
 class Process:
-	__scriptPath = ''
-	__scriptParameterString = ''
-	__scriptInputStream = ''
-	__PPORoot = None
 	__labNumber = ''
 	__exerciseNumber = 0
-	__sourceRoot = None
 	__timeout = False
 	__resultXMLRoot = None
 	__socket = None
-	__scheme = ''
 	__user = -1
+	__channelRoots = {}
+	__replace = {}
 
 	error = False
 
@@ -67,7 +62,12 @@ class Process:
 		self.__socket = socket
 		self.__labNumber = labNumber
 		self.__exerciseNumber = exerciseNumber
-		self.__scheme = schema
+
+		self.__replace['schema'] = schema
+		self.__replace['passw'] = 'PASSWORD_REPLACE_ME'
+		self.__replace['workdir'] = workDir
+		self.__replace['sol'] = sol
+		self.__replace['eid'] = str(exerciseNumber)
 
 		print('User: '+schema + ' Lab: '+str(labNumber) + ' ExNu: '+str(exerciseNumber))
 
@@ -81,14 +81,6 @@ class Process:
 			self.error = True
 			return
 
-		#fill the defined variable with specific data from exerciseRoots
-		self.__scriptPath = exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]').get('scriptPath')
-		self.__scriptParameterString = exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]').get('arguments')
-		#fill input stream, \n mean enter in console
-		for input in exerciseRoots[exerciseNumber].findall('./exercise[@n="'+labNumber+'"]/inputstream'):
-			self.__scriptInputStream += '\n'+input.text
-
-		#replace spific word
 		user = ''
 		if labNumber == '1':
 			user = 'ertekelo'
@@ -103,69 +95,131 @@ class Process:
 			if user == '':
 				user = 'DB_USERNAME_REPLACE_ME'
 
+		self.__replace['user'] = user
 
-		self.__scriptInputStream = self.__scriptInputStream.replace('$schema',schema).replace('$user',user).replace('$passw', 'PASSWORD_REPLACE_ME').replace('$workdir', workDir)
-
-		if labNumber != '1':
-			self.__scriptInputStream = self.__scriptInputStream.replace('$sol', sol if sol is not None else '') + '\n'
-
-		if sol is not None and labNumber != '1':
-			try:
-				sol = open(sol, 'r').read()
-			except:
-				print('Solution file error')
-				print(sys.exc_info()[1])
-				self.error = True
-				return
-
-			#student optional sourcecode channel
-			try:
-				self.__sourceRoot = ET.fromstring(re.sub('--.*\n','',sol[sol.find('<tasks>'):sol.find('</tasks>')+8].replace('prompt','')))
-			except:
-				print('Solution file has wrong syntax')
-				print(sys.exc_info()[1])
-				self.error = True
-				return
+		self.__channelRoots['Main'] = self.script(exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]'))
+		for scriptInit in exerciseRoots[exerciseNumber].findall('./exercise[@n="'+labNumber+'"]/script'):
+			self.__channelRoots[scriptInit.get('channelName')] = self.script(scriptInit)
 
 		#Output result XML to the socket caller
 		self.__resultXMLRoot = ET.Element('exercise',{'EID':str(exerciseNumber),'LID':str(labNumber), 'User':schema})
+
+	def getSocket(self):
+		return self.__socket
+
+	def script(self,target):
+		channelRoot = {}
+		channelRoot['channelFormat'] = target.get('channelFormat') if target.get('channelFormat') is not None else 'xml'
+		channelRoot['Path'] = self.replaceIDs(target.get('scriptPath'))
+		channelRoot['ParameterString'] = self.replaceIDs(target.get('arguments'))
+		channelRoot['Entry'] = target.get('entry')
+		channelRoot['InputStream'] = []
+
+		for input in target.findall('./inputstream'):
+			channelRoot['InputStream'].append({'fromXML':False,'text':self.replaceIDs(input.text)} if input.get('fromXML') is None else {'fromXML':True,'text':self.replaceIDs(input.get('fromXML'))})
+
+		return channelRoot
+
+	def replaceIDs(self, param):
+		for key in self.__replace:
+			if self.__replace[key] is not None:
+				param = param.replace('$'+key,self.__replace[key])
+		return param
 
 	def userpool(self):
 		with queueLock:
 			if self.__user != -1:
 				runEvulatorUser[self.__user] = True
 
-	'''Run the given script with given arguments and inputstream'''
-	def run(self, threadName):
-		#run background subprocess with given configure
-		print(str(self.__user)+':'+self.__scheme+'-'+str(self.__exerciseNumber)+': '+threadName+'=> [Wait '+self.__scriptPath+' script ...]')
-		with subprocess.Popen([self.__scriptPath,self.__scriptParameterString], stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True) as proc:
-			try:
-				self.__outs, self.__errs = proc.communicate(input=self.__scriptInputStream,timeout=60)
-			except subprocess.TimeoutExpired:
-				self.__timeout = True
-				print(str(datetime.datetime.now()) +'=>  [Script timeout]')
-				proc.kill()
-
-		if self.__timeout:
-			self.userpool()
-			return
-		print(str(datetime.datetime.now()) + '=>  [Script run finish]')
-		#Cut everything before <tasks> element and after </tasks> element
-		self.__outs = self.__outs[self.__outs.find('<tasks>'):self.__outs.find('</tasks>')+8]
-
-		self.userpool()
-
+	def generateInputStreamFromXML(self, XMLPath, channelName):
 		try:
-			self.__PPORoot = ET.fromstring(self.__outs)
+			xmlRoot = ET.fromstring(open(XMLPath, 'r').read())
+			result = 'print|||<tasks>\n'
+			for task in xmlRoot.findall('.//task'):
+				result += 'print|||<task n="'+task.get('n')+'">\n'
+				if len(task.findall('./subtask')) == 0:
+					result += 'print|||<![CDATA[\n'
+					result += re.sub('^\s+','',task.text) + '\n'
+					result += 'print|||]]>\n'
+				else:
+					for subtask in task.findall('./subtask'):
+						result += 'print|||<subtask n="'+subtask.get('n')+'">\n'
+						result += 'print|||<![CDATA[\n'
+						result += re.sub('\s+$','',re.sub('^\s+','',subtask.text)) + '\n'
+						result += 'print|||]]>\n'
+						result += 'print|||</subtask>\n'
+				result += 'print|||</task>\n'
+			result += 'print|||</tasks>'
+			return result
 		except:
 			self.error = True
-			with queueLock:
-				self.__socket.send(b'Student output parse error')
-				print('Student output parse error')
-				print(sys.exc_info()[1])
-				self.__socket.shutdown(socket.SHUT_RDWR)
+			print(channelName + ' => [Script inputStream error]')
+			return None
+
+
+	def runSubProcess(self,channelName):
+		print('[Wait '+self.__channelRoots[channelName]['Path']+' script ...]')
+		inputStream = ''
+		for input in self.__channelRoots[channelName]['InputStream']:
+			if input['fromXML']:
+				inputFromXML = self.generateInputStreamFromXML(input['text'], channelName)
+				if inputFromXML is None:
+					return
+				inputStream += inputFromXML + '\n'
+			else:
+				inputStream += input['text'] + '\n'
+
+		arguments = [self.__channelRoots[channelName]['ParameterString']] if len(self.__channelRoots[channelName]['ParameterString'].split('=')) == 0 else self.__channelRoots[channelName]['ParameterString'].split('=')
+		scall = [self.__channelRoots[channelName]['Path']]
+		for arg in arguments:
+			for argi in arg.split(' '):
+				scall.append(argi)
+		#print(scall)
+		with subprocess.Popen(scall, stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True) as proc:
+			try:
+				self.__channelRoots[channelName]['out'], self.__channelRoots[channelName]['error'] = proc.communicate(input=inputStream,timeout=60)
+			except subprocess.TimeoutExpired:
+				self.__timeout = True
+				print(channelName + ' =>  [Script timeout]')
+				proc.kill()
+				return
+
+
+		print(channelName + ' =>  [Script run finish]')
+
+		if self.__channelRoots[channelName]['channelFormat'] == 'xml':
+			self.__channelRoots[channelName]['out'] = self.__channelRoots[channelName]['out'][self.__channelRoots[channelName]['out'].find('<tasks>'):self.__channelRoots[channelName]['out'].find('</tasks>')+8]
+			#print(self.__channelRoots[channelName]['out'])
+			try:
+				self.__channelRoots[channelName]['out'] = ET.fromstring(self.__channelRoots[channelName]['out'])
+			except:
+				self.error = True
+				with queueLock:
+					self.__socket.send(b'script output parse error')
+					print('script output parse error')
+					print(sys.exc_info()[1])
+					self.__socket.shutdown(socket.SHUT_RDWR)
+				return
+
+	'''Run the given script with given arguments and inputstream'''
+	def run(self, threadName):
+		print(str(self.__user)+':'+self.__replace['schema']+'-'+str(self.__exerciseNumber)+': '+threadName)
+		#run preScripts
+		for key in self.__channelRoots:
+			if (self.__channelRoots[key]['Entry'] == 'pre'):
+				self.runSubProcess(key)
+				if self.error:
+					return
+
+		self.runSubProcess('Main')
+		if self.error:
 			return
+
+		for key in self.__channelRoots:
+			if (self.__channelRoots[key]['Entry'] == 'post'):
+				self.runSubProcess(key)
+				if self.error:
+					return
 
 	'''Get task output from rootObject (source or preprocessor output channel)'''
 	def getExerciseTask(self,task, rootObject):
@@ -174,46 +228,45 @@ class Process:
 		else:
 			result = rootObject.find('.//task[@n="'+task.get('n')+'"]')
 
-		return result.text if result is not None else None
-
-	'''Get task output (source or output depending whether fromSource attribute exists in solItem)'''
-	def getSourceOrOutput(self,solItem,task):
-		if solItem is not None and solItem.get('fromSource') is None:
-			return self.getChannelContent(ChannelType.output, task)
-		else:
-			return self.getChannelContent(ChannelType.sourceCode, task)
+		return result.text if result is not None else ''
 
 
 	'''Get task content from channel. channel is passed as a ChannelType enum member. Whitespaces are removed from contents beginning and end (trimmed).'''
 	def getChannelContent(self, channel, task, toLowerCase=True):
-		if channel == ChannelType.output:
-			output = self.getExerciseTask(task, self.__PPORoot)
-		elif channel == ChannelType.sourceCode and self.__sourceRoot is not None:
-			output = self.getExerciseTask(task, self.__sourceRoot)
+		output = ''
+		if channel is None:
+			output = self.getExerciseTask(task, self.__channelRoots['Main']['out'])
 		else:
-			output = None
+			if channel not in self.__channelRoots:
+				return None
+			if self.__channelRoots[channel]['channelFormat'] == 'xml':
+				output = self.getExerciseTask(task, self.__channelRoots[channel]['out'])
+			else:
+				output = self.__channelRoots[channel]['out']
 
-		if output is not None:
-			#reformed result
-			output = re.sub('(^\s+|\s+$)','',output)
-			if toLowerCase:
-				output = output.lower()
+		if output is None:
+			output = ''
+
+		#reformed result
+		output = re.sub('(^\s+|\s+$)','',output)
+		if toLowerCase:
+			output = output.lower()
 
 		return output
 
 	'''Run the given task solutions with specific evaluateMode functions'''
 	def runEvaluateRutin(self,task,sol,solItem, result, bonus, resultTask):
 		#get result from specified channel
-		output = self.getSourceOrOutput(solItem,task)
+		output = self.getChannelContent(solItem.get('channelName'),task)
 
-		ETappendChildTruncating(resultTask, 'Output' if solItem.get('fromSource') is None else 'Source', output, args.tooLong)
+		ETappendChildTruncating(resultTask, 'Output' if solItem.get('channelName') is None else solItem.get('channelName'), output, args.tooLong)
 
 		if task.find('solution') is None:
-			ET.SubElement(resultTask,'Required').text = re.sub('\s+$','',re.sub('^\s+','',task.find('description').text))
+			ET.SubElement(resultTask,'Required').text = re.sub('\s+$','',re.sub('^\s+','',task.find('description').text if task.find('description') is not None else ''))
 			return
 
 
-		if output is not None:
+		if output != '':
 			#remove white space characters from exercises.N.xml specified sol. element text
 			solution = re.sub('\s+',' ',solItem.text).strip(' ').lower()
 
@@ -297,6 +350,8 @@ class Process:
 
 		for task in tasks:
 			groupTaskNode = exerciseRoots[self.__exerciseNumber].find('./exercise[@n="'+self.__labNumber+'"]//task[@n="'+task.get('n')+'"]/..')
+			if groupTaskNode is not None and groupTaskNode.tag != 'taskgroup':
+				groupTaskNode = None
 			if task.get('reference') is not None:
 				for child in exerciseRoots[int(task.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]//task[@id="'+task.get('reference-id')+'"]'):
 					task.append(child)
@@ -322,9 +377,9 @@ class Process:
 
 			if len(task.findall('./subtask')) == 0:
 				Description = ET.SubElement(resultTask,'Description')
-				Description.text = task.find('./description').text
+				Description.text = task.find('./description').text if task.find('./description') is not None else ' '
 				# add source code here
-				output = self.getChannelContent(ChannelType.sourceCode, task, False)
+				output = self.getChannelContent('Source', task, False)
 				ETappendChildTruncating(resultTask, 'Source', output, args.tooLong)
 				# go on to scoring
 				actScore = self.evaluate(task,resultTask)
@@ -336,11 +391,11 @@ class Process:
 				for subtask in task.findall('./subtask'):
 					resultSubTask = ET.SubElement(resultTask,'SubTask',{'n':subtask.get('n')})
 					Description = ET.SubElement(resultSubTask,'Description')
-					Description.text = subtask.find('./description').text
+					Description.text = subtask.find('./description').text if subtask.find('./description') is not None else ''
 					TaskText = ET.SubElement(resultSubTask,'TaskText')
 					TaskText.text = subtask.find('./tasktext').text if subtask.find('./tasktext') is not None else ''
 					# add source code here
-					output = self.getChannelContent(ChannelType.sourceCode, subtask, False)
+					output = self.getChannelContent('Source', subtask, False)
 					ETappendChildTruncating(resultSubTask, 'Source', output, args.tooLong)
 					# go on to scoring
 					actScore = self.evaluate(subtask,resultSubTask)
@@ -361,8 +416,17 @@ class Process:
 
 		self.__resultXMLRoot.set('Score',str(scoreMax)+'/'+str(scoreResult))
 		with queueLock:
+			#self.debug_xml(self.__resultXMLRoot)
 			self.__socket.send(ET.tostring(self.__resultXMLRoot))
 			self.__socket.shutdown(socket.SHUT_RDWR)
+
+	def debug_xml(self, xmlObject):
+		print(xmlObject.tag,xmlObject.attrib)
+		if xmlObject.text:
+			print(xmlObject.tag,xmlObject.text)
+		for item in xmlObject.findall('./*'):
+			self.debug_xml(item)
+
 
 class newWorkerThread (threading.Thread):
 	def __init__(self, threadID, name, q):
@@ -468,9 +532,12 @@ def process_data(threadName, q):
 			if data is not None:
 				#run it
 				data.run(threadName)
+				data.userpool()
 				if not data.error:
 					#evaluateAll and send result back to the socket
 					data.evaluateAll()
+				else:
+					data.getSocket().shutdown(socket.SHUT_RDWR)
 		else:
 			time.sleep(0.1)
 
