@@ -97,9 +97,16 @@ class Process:
 
 		self.__replace['user'] = user
 
-		self.__channelRoots['Main'] = self.script(exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]'))
+		# Main script can either be defined in the exercise tag as well as a children script[@entry='main'] tag.
+		if exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]').get('scriptPath') is not None:
+			self.__channelRoots['Main'] = self.script(exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]'))
+			print('*')
 		for scriptInit in exerciseRoots[exerciseNumber].findall('./exercise[@n="'+labNumber+'"]/script'):
-			self.__channelRoots[scriptInit.get('channelName')] = self.script(scriptInit)
+			channelName=scriptInit.get('channelName') if scriptInit.get('entry') != 'main' else 'Main'
+			if channelName not in self.__channelRoots:
+				self.__channelRoots[channelName] = self.script(scriptInit)
+			else:
+				print('Warning: duplicate definition skipped for channel ' + channelName + ' at Lab: ' + str(labNumber) + ' ExNu: ' + str(exerciseNumber))
 
 		#Output result XML to the socket caller
 		self.__resultXMLRoot = ET.Element('exercise',{'EID':str(exerciseNumber),'LID':str(labNumber), 'User':schema})
