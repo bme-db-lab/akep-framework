@@ -137,7 +137,8 @@ class Process:
 
 	def generateInputStreamFromXML(self, XMLPath, channelName):
 		try:
-			xmlRoot = ET.fromstring(open(XMLPath, 'r').read())
+			file = open(XMLPath, 'r').read()
+			xmlRoot = ET.fromstring(file)
 			result = 'print|||<tasks>\n'
 			for task in xmlRoot.findall('.//task'):
 				result += 'print|||<task n="'+task.get('n')+'">\n'
@@ -154,10 +155,11 @@ class Process:
 						result += 'print|||</subtask>\n'
 				result += 'print|||</task>\n'
 			result += 'print|||</tasks>'
+			#print(result)
 			return result
 		except:
 			self.error = True
-			print(channelName + ' => [Script inputStream error]')
+			self.sendErrorMessage(channelName + '[Script inputStream error]\nDetails\n'+str(sys.exc_info()))
 			return None
 
 
@@ -198,11 +200,7 @@ class Process:
 				self.__channelRoots[channelName]['out'] = ET.fromstring(self.__channelRoots[channelName]['out'])
 			except:
 				self.error = True
-				with queueLock:
-					self.__socket.send(b'script output parse error')
-					print('script output parse error')
-					print(sys.exc_info()[1])
-					self.__socket.shutdown(socket.SHUT_RDWR)
+				self.sendErrorMessage('[Script output parse error]\nDetails\n'+str(sys.exc_info())+'\nsubprocess:\n'+self.__channelRoots[channelName]['error'] if 'error' in self.__channelRoots[channelName] else '')
 				return
 
 	'''Run the given script with given arguments and inputstream'''
@@ -242,7 +240,7 @@ class Process:
 			output = self.getExerciseTask(task, self.__channelRoots['Main']['out'])
 		else:
 			if channel not in self.__channelRoots:
-				return None
+				return ''
 			if self.__channelRoots[channel]['channelFormat'] == 'xml':
 				output = self.getExerciseTask(task, self.__channelRoots[channel]['out'])
 			else:
@@ -326,17 +324,30 @@ class Process:
 				if result[0] < oldresult:
 					result[0] = oldresult
 
+		if task.findall('solution')[0].get('score') is None:
+			print('missing score in Solution element in:'+task.get('n'))
+			return [result[0] + result[1], 0]
 		return [result[0] + result[1], float(task.findall('solution')[0].get('score'))]
+
+
+	def sendErrorMessage(self, message):
+		with queueLock:
+			try:
+				self.__socket.send(message.encode())
+			except:
+				print('Couldnt send data from socket\n'+str(sys.exc_info()))
+			print(message)
+			try:
+				self.__socket.shutdown(socket.SHUT_RDWR)
+			except:
+				print('Couldnt close the socket')
 
 
 
 	'''Create result output with call evaluate function to every task, listen to reference'''
 	def evaluateAll(self):
 		if self.__timeout:
-			with queueLock:
-				self.__resultXMLRoot.set('TimeOut','True')
-				self.__socket.send(ET.tostring(self.__resultXMLRoot))
-				self.__socket.shutdown(socket.SHUT_RDWR)
+			self.sendErrorMessage('TimeOut')
 			return
 
 		scoreResult = 0
@@ -384,7 +395,8 @@ class Process:
 				Description.text = task.find('./description').text if task.find('./description') is not None else ' '
 				# add source code here
 				output = self.getChannelContent('Source', task, False)
-				ETappendChildTruncating(resultTask, 'Source', output, args.tooLong)
+				if output != '':
+					ETappendChildTruncating(resultTask, 'Source', output, args.tooLong)
 				# go on to scoring
 				actScore = self.evaluate(task,resultTask)
 				taskScore[0] = actScore[1]
@@ -400,7 +412,8 @@ class Process:
 					TaskText.text = subtask.find('./tasktext').text if subtask.find('./tasktext') is not None else ''
 					# add source code here
 					output = self.getChannelContent('Source', subtask, False)
-					ETappendChildTruncating(resultSubTask, 'Source', output, args.tooLong)
+					if output != '':
+						ETappendChildTruncating(resultSubTask, 'Source', output, args.tooLong)
 					# go on to scoring
 					actScore = self.evaluate(subtask,resultSubTask)
 					resultSubTask.set('Score',str(actScore[1])+'/'+str(actScore[0]))
@@ -541,7 +554,10 @@ def process_data(threadName, q):
 					#evaluateAll and send result back to the socket
 					data.evaluateAll()
 				else:
-					data.getSocket().shutdown(socket.SHUT_RDWR)
+					try:
+						data.getSocket().shutdown(socket.SHUT_RDWR)
+					except:
+						print('socket is closed')
 		else:
 			time.sleep(0.1)
 
