@@ -46,19 +46,16 @@ queueLock = threading.Lock()
 
 '''If socket get a process message it convert to Process object'''
 class Process:
-	__labNumber = ''
-	__exerciseNumber = 0
-	__timeout = False
-	__resultXMLRoot = None
-	__socket = None
-	__user = -1
-	__channelRoots = {}
-	__replace = {}
-
 	error = False
 
 	'''Create inputs to preprocessor and initialize result XML root'''
 	def __init__(self,socket, exerciseNumber, labNumber,schema,sol):
+		self.__timeout = False
+		self.__resultXMLRoot = None
+		self.__user = -1
+		self.__channelRoots = {}
+		self.__replace = {}
+
 		self.__socket = socket
 		self.__labNumber = labNumber
 		self.__exerciseNumber = exerciseNumber
