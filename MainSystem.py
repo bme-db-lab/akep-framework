@@ -51,7 +51,7 @@ class Process:
 	'''Create inputs to preprocessor and initialize result XML root'''
 	def __init__(self,socket, exerciseNumber, labNumber,schema,sol):
 		self.__timeout = False
-		self.__resultXMLRoot = None
+		self.resultXMLRoot = None
 		self.__user = -1
 		self.__channelRoots = {}
 		self.__replace = {}
@@ -68,13 +68,23 @@ class Process:
 
 		print('User: '+schema + ' Lab: '+str(labNumber) + ' ExNu: '+str(exerciseNumber))
 
+		self.resultXMLRoot = ET.Element('exercise',{'EID':str(exerciseNumber),'LID':str(labNumber), 'User':schema})
+
+		if sol is not None and not os.path.isfile(sol):
+			print('No exist sol file')
+			self.resultXMLRoot.set('error','No exist sol file')
+			self.error = True
+			return
+
 		if exerciseRoots[exerciseNumber] is None:
 			print('No exist exercise.N.xml')
+			self.resultXMLRoot.set('error','No exist exercise.N.xml: '+str(exerciseNumber))
 			self.error = True
 			return
 
 		if exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]') is None:
 			print('No exist exercise')
+			self.resultXMLRoot.set('error','No exist lab in '+str(exerciseNumber)+' exercise: '+labNumber)
 			self.error = True
 			return
 
@@ -105,8 +115,10 @@ class Process:
 			else:
 				print('Warning: duplicate definition skipped for channel ' + channelName + ' at Lab: ' + str(labNumber) + ' ExNu: ' + str(exerciseNumber))
 
-		#Output result XML to the socket caller
-		self.__resultXMLRoot = ET.Element('exercise',{'EID':str(exerciseNumber),'LID':str(labNumber), 'User':schema})
+		if 'Main' not in self.__channelRoots:
+			self.resultXMLRoot.set('error','No main script setting (missing scriptpath or/and arguments...)')
+			self.error = True
+			return
 
 	def getSocket(self):
 		return self.__socket
@@ -352,7 +364,7 @@ class Process:
 
 		scoreResult = 0
 		scoreMax = 0
-		resultTasks = ET.SubElement(self.__resultXMLRoot,'taskDetails')
+		resultTasks = ET.SubElement(self.resultXMLRoot,'taskDetails')
 		exercise = exerciseRoots[self.__exerciseNumber].find('./exercise[@n="'+self.__labNumber+'"]')
 		actExercise = exercise if exercise.get('reference') is None else exerciseRoots[int(exercise.get('reference'))].find('./exercise[@n="'+self.__labNumber+'"]')
 
@@ -431,10 +443,10 @@ class Process:
 				groupResultTask.set('Score',str(groupScore[0])+'/'+str(groupScore[1]))
 			actindex +=1
 
-		self.__resultXMLRoot.set('Score',str(scoreMax)+'/'+str(scoreResult))
+		self.resultXMLRoot.set('Score',str(scoreMax)+'/'+str(scoreResult))
 		with queueLock:
-			#self.debug_xml(self.__resultXMLRoot)
-			self.__socket.send(ET.tostring(self.__resultXMLRoot))
+			#self.debug_xml(self.resultXMLRoot)
+			self.__socket.send(ET.tostring(self.resultXMLRoot))
 			self.__socket.shutdown(socket.SHUT_RDWR)
 
 	def debug_xml(self, xmlObject):
@@ -508,7 +520,7 @@ class ClientThread(threading.Thread):
 						proc = Process(self.socket,int(params[0]), params[1],params[2],params[3])
 
 					if proc.error:
-						self.socket.send(b'Source parse error')
+						self.socket.send(ET.tostring(proc.resultXMLRoot))
 						break
 					#put the queue, one thread will process it
 					workQueue.put(proc)
