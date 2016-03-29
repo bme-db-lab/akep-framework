@@ -29,6 +29,8 @@ def containOr(input, param, args):
 
 #Az adott paraméter (mely tartalmazhat reguláris kifejezéseket) illeszkedik-e a kapott bemenetre
 def regexpToInput(input, param, args):
+	if input == '' and param == '':
+		return True
 	param = re.sub('\s+','\s*',param)
 	dictArgs = getDictFromArgs(args)
 	for skipchar in dictArgs['skipchar']:

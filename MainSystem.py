@@ -280,27 +280,27 @@ class Process:
 			return
 
 
-		if output != '':
-			#remove white space characters from exercises.N.xml specified sol. element text
-			solution = re.sub('\s+',' ',solItem.text).strip(' ').lower()
 
-			ET.SubElement(resultTask,'Required').text = solution
+		#remove white space characters from exercises.N.xml specified sol. element text
+		solution = re.sub('\s+',' ',solItem.text).strip(' ').lower()
 
-			with queueLock:
-				#get the result from evaluateMode and score it with solution score
-				try:
-					res = getattr(evaluateMode, solItem.get('evaluateMode'))(output,solution,solItem.get('evaluateArgs'))
-				except:
-					print('Error in evaluateMode: ' + solItem.get('evaluateMode') + ' Task: '+task.get('n'))
-					return [result,bonus]
+		ET.SubElement(resultTask,'Required').text = solution
 
-				val = float(sol.get('score')) if (solItem.get('negation')==None and res) or (solItem.get('negation') and not res) else 0
+		with queueLock:
+			#get the result from evaluateMode and score it with solution score
+			try:
+				res = getattr(evaluateMode, solItem.get('evaluateMode'))(output,solution,solItem.get('evaluateArgs'))
+			except:
+				print('Error in evaluateMode: ' + solItem.get('evaluateMode') + ' Task: '+task.get('n'))
+				return [result,bonus]
 
-			#val add to bonusScore or resultScore depends by bonus attribute
-			if sol.get('bonus') is not None and val > bonus:
-				bonus = val
-			elif sol.get('bonus') is None and val > result:
-				result = val
+			val = float(sol.get('score')) if (solItem.get('negation')==None and res) or (solItem.get('negation') and not res) else 0
+
+		#val add to bonusScore or resultScore depends by bonus attribute
+		if sol.get('bonus') is not None and val > bonus:
+			bonus = val
+		elif sol.get('bonus') is None and val > result:
+			result = val
 		return [result,bonus]
 
 	'''Calc the score'''
