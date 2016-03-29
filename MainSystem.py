@@ -156,13 +156,13 @@ class Process:
 				result += 'print|||<task n="'+task.get('n')+'">\n'
 				if len(task.findall('./subtask')) == 0:
 					result += 'print|||<![CDATA[\n'
-					result += re.sub('^\s+','',task.text) + '\n'
+					result += re.sub('^\s+|\s+$','',task.text) + '\n'
 					result += 'print|||]]>\n'
 				else:
 					for subtask in task.findall('./subtask'):
 						result += 'print|||<subtask n="'+subtask.get('n')+'">\n'
 						result += 'print|||<![CDATA[\n'
-						result += re.sub('\s+$','',re.sub('^\s+','',subtask.text)) + '\n'
+						result += re.sub('^\s+|\s+$','',subtask.text) + '\n'
 						result += 'print|||]]>\n'
 						result += 'print|||</subtask>\n'
 				result += 'print|||</task>\n'
