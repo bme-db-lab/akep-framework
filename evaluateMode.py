@@ -37,9 +37,16 @@ def regexpToInput(input, param, args):
 		input = input.replace(skipchar,'')
 	return re.search(param, input, re.DOTALL)
 
+#----LOG---- és ----LOG---- között lévő tartalom egyéb kezelése
+def fromLog(input,args):
+	if 'fromLog' in getDictFromArgs(args):
+		return re.sub('----LOG----\n|----LOG----','',input),True
+	return input,False
+
 
 #A kimenet oszlopnevei között megtalálható-e minden a paraméterven megadott ','-vel elválasztott oszlopnév
 def ColumnsEqualParam(input,param, args):
+	input,res = fromLog(input, args)
 	rows = input.split('\n')
 	firstColumns = rows[0].replace('"','').split(',')
 	paramColumns = param.split(',')
@@ -55,15 +62,21 @@ def ColumnsEqualParam(input,param, args):
 
 #A kimenet sorainak száma megegyezik-e a paraméterben kapott számmal
 def rowNumEq(input,param, args):
-	return len(input.split('\n')) - 1 == int(param)
+	input,res = fromLog(input, args)
+	rowp = 1 if not res else 0
+	return len(input.split('\n')) - rowp == int(param)
 
 #A kimenet sorainak száma >= ? a paraméterben kapott számnál
 def rowNumGrEq(input,param, args):
-	return len(input.split('\n')) - 1 >= int(param)
+	input,res = fromLog(input, args)
+	rowp = 1 if not res else 0
+	return len(input.split('\n')) - rowp >= int(param)
 
 #A kimenet sorainak száma <= ? a paraméterben kapott számnál
 def rowNumLtEq(input,param, args):
-	return len(input.split('\n')) - 1 <= int(param)
+	input,res = fromLog(input, args)
+	rowp = 1 if not res else 0
+	return len(input.split('\n')) - rowp <= int(param)
 
 #Adott kimeneti cella(cellák|sorok) tartalma megegyezik-e a paraméterben megadott cella(cellák|sorok)-al
 #használat:
@@ -71,6 +84,9 @@ def rowNumLtEq(input,param, args):
 #	* sorszám,oszlopszám::egész sor|||...|||...
 #	* a ||| az összefűzés, jelentése: minden amit néz ÉS kapcsolatban vizsgálja
 def cellData(input,param, args):
+	input,res = fromLog(input, args)
+	rowp = 1 if not res else 0
+
 	rows = input.replace('"','').split('\n')
 	for cell in param.split('|||'):
 		cellPos = cell.split(':')[0].split(',')
