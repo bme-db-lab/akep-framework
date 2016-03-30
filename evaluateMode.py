@@ -40,8 +40,9 @@ def regexpToInput(input, param, args):
 #----LOG---- és ----LOG---- között lévő tartalom egyéb kezelése
 def fromLog(input,args):
 	if 'fromLog' in getDictFromArgs(args):
-		return re.sub('----LOG----\n|----LOG----','',input),True
-	return input,False
+		return re.sub('----log----\n|----log----','',input),True
+
+	return re.sub('----log----.*----log----','',input,re.DOTALL),False
 
 
 #A kimenet oszlopnevei között megtalálható-e minden a paraméterven megadott ','-vel elválasztott oszlopnév

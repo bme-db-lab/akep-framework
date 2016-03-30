@@ -187,13 +187,11 @@ class Process:
 			else:
 				inputStream += input['text'] + '\n'
 
-		arguments = [self.__channelRoots[channelName]['ParameterString']] if len(self.__channelRoots[channelName]['ParameterString'].split('=')) == 0 else self.__channelRoots[channelName]['ParameterString'].split('=')
-		scall = [self.__channelRoots[channelName]['Path']]
-		for arg in arguments:
-			for argi in arg.split(' '):
-				scall.append(argi)
-		#print(scall)
-		with subprocess.Popen(scall, stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True) as proc:
+		arguments = self.__channelRoots[channelName]['ParameterString'].replace('=',' ')
+		arguments = arguments.split(' ')
+		arguments.insert(0,self.__channelRoots[channelName]['Path'])
+
+		with subprocess.Popen(arguments, stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True) as proc:
 			try:
 				self.__channelRoots[channelName]['out'], self.__channelRoots[channelName]['error'] = proc.communicate(input=inputStream,timeout=60)
 			except subprocess.TimeoutExpired:
