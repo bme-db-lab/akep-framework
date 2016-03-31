@@ -31,6 +31,8 @@ def containOr(input, param, args):
 def regexpToInput(input, param, args):
 	if input == '' and param == '':
 		return True
+	if param == '':
+		return False
 	param = re.sub('\s+','\s*',param)
 	dictArgs = getDictFromArgs(args)
 	for skipchar in dictArgs['skipchar']:
@@ -40,9 +42,8 @@ def regexpToInput(input, param, args):
 #----LOG---- és ----LOG---- között lévő tartalom egyéb kezelése
 def fromLog(input,args):
 	if 'fromLog' in getDictFromArgs(args):
-		return re.sub('----log----\n|----log----','',input),True
-
-	return re.sub('----log----.*----log----','',input,re.DOTALL),False
+		return re.sub('.?.?----log----.?','',input,flags=re.DOTALL),True
+	return re.sub('..----log----.*----log----.*','',input,flags=re.DOTALL),False
 
 
 #A kimenet oszlopnevei között megtalálható-e minden a paraméterven megadott ','-vel elválasztott oszlopnév
