@@ -11,6 +11,7 @@ import time
 import datetime
 import argparse
 import sys
+import time
 
 from util.xmlHelper import *
 
@@ -72,7 +73,7 @@ class Process:
 
 		if sol is not None and not os.path.isfile(sol):
 			print('No exist sol file')
-			self.resultXMLRoot.set('error','No exist sol file')
+			self.resultXMLRoot.set('error','No exist sol file: '+sol)
 			self.error = True
 			return
 
@@ -104,6 +105,11 @@ class Process:
 
 		self.__replace['user'] = user
 
+		if self.__user != -1:
+			self.__replace['portNumber'] = str(15000 + self.__user)
+		else:
+			self.__replace['portNumber'] = str(14999)
+
 		# Main script can either be defined in the exercise tag as well as a children script[@entry='main'] tag.
 		if exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]').get('scriptPath') is not None:
 			self.__channelRoots['Main'] = self.script(exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]'))
@@ -126,10 +132,12 @@ class Process:
 	def script(self,target):
 		channelRoot = {}
 		channelRoot['channelFormat'] = target.get('channelFormat') if target.get('channelFormat') is not None else 'xml'
-		channelRoot['Path'] = self.replaceIDs(target.get('scriptPath'))
-		channelRoot['ParameterString'] = self.replaceIDs(target.get('arguments'))
+		channelRoot['Path'] = self.replaceIDs(target.get('scriptPath')) if target.get('scriptPath') is not None else ''
+		channelRoot['ParameterString'] = self.replaceIDs(target.get('arguments')) if target.get('arguments') is not None else ''
 		channelRoot['Entry'] = target.get('entry')
 		channelRoot['InputStream'] = []
+		channelRoot['referenceChannel'] = target.get('referenceChannel')
+		channelRoot['command'] = target.get('command')
 
 		for input in target.findall('./inputstream'):
 			channelRoot['InputStream'].append({'fromXML':False,'text':self.replaceIDs(input.text)} if input.get('fromXML') is None else {'fromXML':True,'text':self.replaceIDs(input.get('fromXML'))})
@@ -191,19 +199,29 @@ class Process:
 		arguments = arguments.split(' ')
 		arguments.insert(0,self.__channelRoots[channelName]['Path'])
 
-		with subprocess.Popen(arguments, stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True) as proc:
-			try:
-				self.__channelRoots[channelName]['out'], self.__channelRoots[channelName]['error'] = proc.communicate(input=inputStream,timeout=60)
-			except subprocess.TimeoutExpired:
-				self.__timeout = True
-				print(channelName + ' =>  [Script timeout]')
-				proc.kill()
-				return
+		#print(arguments)
+		if self.__channelRoots[channelName]['Entry'] == 'con':
+			self.__channelRoots[channelName]['con'] = subprocess.Popen(arguments,stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True)
+			time.sleep(1)
+			print(channelName + ' =>  [Script running]')
+		elif self.__channelRoots[channelName]['referenceChannel'] is not None:
+			if self.__channelRoots[channelName]['command'] == 'exit':
+				print('[Killed: '+self.__channelRoots[channelName]['referenceChannel']+']')
+				self.__channelRoots[self.__channelRoots[channelName]['referenceChannel']]['con'].kill()
+		else:
+			with subprocess.Popen(arguments, stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True) as proc:
+				try:
+					self.__channelRoots[channelName]['out'], self.__channelRoots[channelName]['error'] = proc.communicate(input=inputStream,timeout=60)
+				except subprocess.TimeoutExpired:
+					self.__timeout = True
+					print(channelName + ' =>  [Script timeout]')
+					proc.kill()
+					return
+			print(channelName + ' =>  [Script run finish]')
 
 
-		print(channelName + ' =>  [Script run finish]')
 
-		if self.__channelRoots[channelName]['channelFormat'] == 'xml':
+		if self.__channelRoots[channelName]['channelFormat'] == 'xml' and self.__channelRoots[channelName]['Entry'] != 'con':
 			self.__channelRoots[channelName]['out'] = self.__channelRoots[channelName]['out'][self.__channelRoots[channelName]['out'].find('<tasks>'):self.__channelRoots[channelName]['out'].find('</tasks>')+8]
 			#print(self.__channelRoots[channelName]['out'])
 			try:
@@ -218,7 +236,7 @@ class Process:
 		print(str(self.__user)+':'+self.__replace['schema']+'-'+str(self.__exerciseNumber)+': '+threadName)
 		#run preScripts
 		for key in self.__channelRoots:
-			if (self.__channelRoots[key]['Entry'] == 'pre'):
+			if (self.__channelRoots[key]['Entry'] == 'pre' or self.__channelRoots[key]['Entry'] == 'con'):
 				self.runSubProcess(key)
 				if self.error:
 					return

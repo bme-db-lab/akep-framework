@@ -93,8 +93,8 @@ def cellData(input,param, args):
 	for cell in param.split('|||'):
 		cellPos = cell.split(':')[0].split(',')
 		allColumnMode = False
-		if len(cell.split(':')) == 3:
-			cellStr = cell.split(':')[2]
+		if len(cell.split('::')) == 2:
+			cellStr = cell.split('::')[1]
 			allColumnMode = True
 		else:
 			cellStr = cell.split(':')[1]
