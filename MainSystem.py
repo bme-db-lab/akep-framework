@@ -201,22 +201,32 @@ class Process:
 
 		#print(arguments)
 		if self.__channelRoots[channelName]['Entry'] == 'con':
-			self.__channelRoots[channelName]['con'] = subprocess.Popen(arguments,stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True)
-			time.sleep(1)
-			print(channelName + ' =>  [Script running]')
+			try:
+				self.__channelRoots[channelName]['con'] = subprocess.Popen(arguments,stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True)
+				time.sleep(1)
+				print(channelName + ' =>  [Script running]')
+			except FileNotFoundError:
+				self.error = True
+				self.sendErrorMessage('[Script not found for channel ' + channelName + ': ' + arguments[0] + ']')
+				return
 		elif self.__channelRoots[channelName]['referenceChannel'] is not None:
 			if self.__channelRoots[channelName]['command'] == 'exit':
 				print('[Killed: '+self.__channelRoots[channelName]['referenceChannel']+']')
 				self.__channelRoots[self.__channelRoots[channelName]['referenceChannel']]['con'].kill()
 		else:
-			with subprocess.Popen(arguments, stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True) as proc:
-				try:
-					self.__channelRoots[channelName]['out'], self.__channelRoots[channelName]['error'] = proc.communicate(input=inputStream,timeout=60)
-				except subprocess.TimeoutExpired:
-					self.__timeout = True
-					print(channelName + ' =>  [Script timeout]')
-					proc.kill()
-					return
+			try:
+				with subprocess.Popen(arguments, stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True) as proc:
+					try:
+						self.__channelRoots[channelName]['out'], self.__channelRoots[channelName]['error'] = proc.communicate(input=inputStream,timeout=60)
+					except subprocess.TimeoutExpired:
+						self.__timeout = True
+						print(channelName + ' =>  [Script timeout]')
+						proc.kill()
+						return
+			except FileNotFoundError:
+				self.error = True
+				self.sendErrorMessage('[Script not found for channel ' + channelName + ': ' + arguments[0] + ']')
+				return
 			print(channelName + ' =>  [Script run finish]')
 
 
