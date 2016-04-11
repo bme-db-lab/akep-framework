@@ -295,7 +295,7 @@ class Process:
 		return output
 
 	'''Run the given task solutions with specific evaluateMode functions'''
-	def runEvaluateRutin(self,task,sol,solItem, result, bonus, resultTask):
+	def runEvaluateRutin(self,task,sol,solItem, result, resultTask):
 		#get result from specified channel
 		output = self.getChannelContent(solItem.get('channelName'),task)
 
@@ -318,23 +318,51 @@ class Process:
 				res = getattr(evaluateMode, solItem.get('evaluateMode'))(output,solution,solItem.get('evaluateArgs'))
 			except:
 				print('Error in evaluateMode: ' + solItem.get('evaluateMode') + ' Task: '+task.get('n'))
-				return [result,bonus]
+				return result
 
+
+		if sol is None or sol.get('score') is None:
+			print('No score add in task solution: ' + task.get('n'))
+			val = 0
+		else:
 			val = float(sol.get('score')) if (solItem.get('negation')==None and res) or (solItem.get('negation') and not res) else 0
 
-		#val add to bonusScore or resultScore depends by bonus attribute
-		if sol.get('bonus') is not None and val > bonus:
-			bonus = val
-		elif sol.get('bonus') is None and val > result:
+		if val > result:
 			result = val
-		return [result,bonus]
+		return result
+
+	def getSolScore(self,task):
+		if task.findall('solution')[0].get('score') is None:
+			print('missing score in Solution element in:'+task.get('n'))
+			return 0
+		return float(task.findall('solution')[0].get('score'))
+
+	def getScoreIndex(self,sol):
+		scoreindex = 0
+		if sol is None:
+			return scoreindex
+		if sol.get('type') == 'bonus':
+			scoreindex = 1
+		elif sol.get('type') == 'minus':
+			scoreindex = 2
+		return scoreindex
+
+	def scoreIt(self,task,sol,solItem, result,resultOut):
+		scoreindex = self.getScoreIndex(sol)
+		result[scoreindex] = self.runEvaluateRutin(task,sol,solItem, result[scoreindex], resultOut)
+		if sol.get('type') is not None:
+			resultOut.set('type',sol.get('type'))
+		if solItem.get('negation') is not None:
+			resultOut.set('negation', 'True')
+		resultOut.set('result',str(result))
+		return result[scoreindex]
 
 	'''Calc the score'''
 	def evaluate(self,task,resultTask):
-		result = [0,0]
+		result = [0,0,0]
 		#if manual test
 		if task.find('solution') is None:
-			self.runEvaluateRutin(task,None,task, 0, 0, resultTask)
+			self.runEvaluateRutin(task,None,task, 0, resultTask)
 			return result
 		#if automatic test
 		#solutionItems connect together with AND logic
@@ -342,30 +370,24 @@ class Process:
 		for sol in task.findall('solution'):
 			if len(sol.findall('solutionItem')) == 0:
 				resultSol = ET.SubElement(resultTask,'Solution',{'method':sol.get('evaluateMode')})
-				result = self.runEvaluateRutin(task,sol,sol, result[0], result[1], resultSol)
-				resultSol.set('result',str(result))
+				self.scoreIt(task,sol,sol, result, resultSol)
 			else:
-				oldresult = result[0]
+				oldresult = result[getScoreIndex(sol)]
 				notBreak = True
 				resultSol = ET.SubElement(resultTask,'Solution')
 				for solItem in sol.findall('solutionItem'):
-					result[0] = 0
+					result[getScoreIndex(sol)] = 0
 					resultSubSol = ET.SubElement(resultSol,'SubSolution',{'method':solItem.get('evaluateMode')})
-					result = self.runEvaluateRutin(task,sol,solItem, result[0], result[1], resultSubSol)
-					resultSubSol.set('result',str(result))
-					if result[0] == 0:
+					if self.scoreIt(task,sol,solItem, result, resultSubSol) == 0:
 						notBreak = False
 				# if a single solutionItem scored for 0 points, this solution gets 0 points.
 				if not notBreak:
-					result[0] = 0
+					result[getScoreIndex(sol)] = 0
 				# if the current solution scores less than the previous, then retain the previous score
-				if result[0] < oldresult:
-					result[0] = oldresult
+				if result[getScoreIndex(sol)] < oldresult:
+					result[getScoreIndex(sol)] = oldresult
 
-		if task.findall('solution')[0].get('score') is None:
-			print('missing score in Solution element in:'+task.get('n'))
-			return [result[0] + result[1], 0]
-		return [result[0] + result[1], float(task.findall('solution')[0].get('score'))]
+		return [result[0] + result[1] - result[2], self.getSolScore(task)]
 
 
 	def sendErrorMessage(self, message):
@@ -430,7 +452,7 @@ class Process:
 
 			if len(task.findall('./subtask')) == 0:
 				Description = ET.SubElement(resultTask,'Description')
-				Description.text = task.find('./description').text if task.find('./description') is not None else ' '
+				Description.text = task.find('./description').text if task.find('./description') is not None else ''
 				# add source code here
 				output = self.getChannelContent('Source', task, False)
 				if output != '':
@@ -442,6 +464,9 @@ class Process:
 				scoreResult += actScore[0]
 				scoreMax += actScore[1]
 			else:
+				taskDesc = ET.SubElement(resultTask,'Description')
+				taskDesc.text = task.find('./description').text if task.find('./description') is not None else ''
+
 				for subtask in task.findall('./subtask'):
 					resultSubTask = ET.SubElement(resultTask,'SubTask',{'n':subtask.get('n')})
 					Description = ET.SubElement(resultSubTask,'Description')
