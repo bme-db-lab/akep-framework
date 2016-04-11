@@ -17,6 +17,8 @@ def getDictFromArgs(Args):
 #Multi: kifejezések elválasztása ';' karakterrel
 #használatára a containAnd ill. containOr szolgál
 def contain(input, param, ORType, args):
+	if param.endswith(';'):
+		param = param[:-1]
 	f = any if ORType else all
 	return f(regexpToInput(input, j, args) for j in param.split(';'))
 
