@@ -31,6 +31,7 @@ def containOr(input, param, args):
 
 #Az adott paraméter (mely tartalmazhat reguláris kifejezéseket) illeszkedik-e a kapott bemenetre
 def regexpToInput(input, param, args):
+	input,res = fromLog(input, args)
 	if input == '' and param == '':
 		return True
 	if param == '':
