@@ -41,11 +41,12 @@ def regexpToInput(input, param, args):
 		input = input.replace(skipchar,'')
 	return re.search(param, input, re.DOTALL)
 
-#----LOG---- és ----LOG---- között lévő tartalom egyéb kezelése
+#----LOG---- és ----LOG---- között lévő tartalom egyéb kezelése, ha van fromLog argumentum (értéktől függetlenül)
 def fromLog(input,args):
 	if 'fromLog' in getDictFromArgs(args):
-		return re.sub('.?.?----log----.?','',input,flags=re.DOTALL),True
-	return re.sub('..----log----.*----log----.*','',input,flags=re.DOTALL),False
+		logString = re.match('----log----(.*)----log----',input,flags=re.DOTALL).group(1) or ''
+		return re.sub('(^\s+|\s+$)','',logString),True
+	return re.sub('(^\s+|\s+$)','',re.sub('----log----.*----log----','',input,flags=re.DOTALL)),False
 
 
 #A kimenet oszlopnevei között megtalálható-e minden a paraméterven megadott ','-vel elválasztott oszlopnév
