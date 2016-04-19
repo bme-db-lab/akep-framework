@@ -307,7 +307,7 @@ class Process:
 
 
 		#remove white space characters from exercises.N.xml specified sol. element text
-		solution = solItem.text.strip().lower()
+		solution = re.sub('\s+',' ',solItem.text).strip().lower()
 
 		ET.SubElement(resultTask,'Required').text = solution
 
