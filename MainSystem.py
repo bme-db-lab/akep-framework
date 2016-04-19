@@ -359,6 +359,19 @@ class Process:
 	'''Calc the score'''
 	def evaluate(self,task,resultTask):
 		result = [0,0,0]
+
+		#dependency check
+		dependencyOk = True
+		for dep in task.findall('dependency'):
+			target = self.resultXMLRoot.find('.//*[@n="'+dep.get('for')+'"]')
+			if target is not None and int(target.get('Score').split('/')[1]) < int(dep.get('minScore')):
+				dependencyOk = False
+				ET.SubElement(resultTask,'Required').text = 'Dependency failed: task:'+dep.get('for')+' minScore:'+dep.get('minScore')
+				break
+
+		if not dependencyOk:
+			return result
+
 		#if manual test
 		if task.find('solution') is None:
 			self.runEvaluateRutin(task,None,task, 0, resultTask)
