@@ -6,7 +6,6 @@ import queue
 import threading
 import socket
 import os
-import re
 import time
 import datetime
 import argparse
@@ -164,13 +163,13 @@ class Process:
 				result += 'print|||<task n="'+task.get('n')+'">\n'
 				if len(task.findall('./subtask')) == 0:
 					result += 'print|||<![CDATA[\n'
-					result += re.sub('^\s+|\s+$','',task.text) + '\n'
+					result += task.text.strip() + '\n'
 					result += 'print|||]]>\n'
 				else:
 					for subtask in task.findall('./subtask'):
 						result += 'print|||<subtask n="'+subtask.get('n')+'">\n'
 						result += 'print|||<![CDATA[\n'
-						result += re.sub('^\s+|\s+$','',subtask.text) + '\n'
+						result += subtask.text.strip() + '\n'
 						result += 'print|||]]>\n'
 						result += 'print|||</subtask>\n'
 				result += 'print|||</task>\n'
@@ -220,7 +219,7 @@ class Process:
 						self.__channelRoots[channelName]['out'], self.__channelRoots[channelName]['error'] = proc.communicate(input=inputStream,timeout=60)
 					except subprocess.TimeoutExpired:
 						self.__timeout = True
-						print(channelName + ' =>  [Script timeout]')
+						print(channelName + ' => [Script timeout]')
 						proc.kill()
 						return
 			except FileNotFoundError:
@@ -288,7 +287,7 @@ class Process:
 			output = ''
 
 		#reformed result
-		output = re.sub('(^\s+|\s+$)','',output)
+		output = output.strip()
 		if toLowerCase:
 			output = output.lower()
 
@@ -302,13 +301,13 @@ class Process:
 		ETappendChildTruncating(resultTask, 'Output' if solItem.get('channelName') is None else solItem.get('channelName'), output, args.tooLong)
 
 		if task.find('solution') is None:
-			ET.SubElement(resultTask,'Required').text = re.sub('\s+$','',re.sub('^\s+','',task.find('description').text if task.find('description') is not None else ''))
+			ET.SubElement(resultTask,'Required').text = task.find('description').text.strip() if task.find('description') is not None else ''
 			return
 
 
 
 		#remove white space characters from exercises.N.xml specified sol. element text
-		solution = re.sub('\s+',' ',solItem.text).strip(' ').lower()
+		solution = solItem.text.strip().lower()
 
 		ET.SubElement(resultTask,'Required').text = solution
 
