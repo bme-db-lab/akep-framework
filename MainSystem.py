@@ -372,20 +372,20 @@ class Process:
 				resultSol = ET.SubElement(resultTask,'Solution',{'method':sol.get('evaluateMode')})
 				self.scoreIt(task,sol,sol, result, resultSol)
 			else:
-				oldresult = result[getScoreIndex(sol)]
+				oldresult = result[self.getScoreIndex(sol)]
 				notBreak = True
 				resultSol = ET.SubElement(resultTask,'Solution')
 				for solItem in sol.findall('solutionItem'):
-					result[getScoreIndex(sol)] = 0
+					result[self.getScoreIndex(sol)] = 0
 					resultSubSol = ET.SubElement(resultSol,'SubSolution',{'method':solItem.get('evaluateMode')})
 					if self.scoreIt(task,sol,solItem, result, resultSubSol) == 0:
 						notBreak = False
 				# if a single solutionItem scored for 0 points, this solution gets 0 points.
 				if not notBreak:
-					result[getScoreIndex(sol)] = 0
+					result[self.getScoreIndex(sol)] = 0
 				# if the current solution scores less than the previous, then retain the previous score
-				if result[getScoreIndex(sol)] < oldresult:
-					result[getScoreIndex(sol)] = oldresult
+				if result[self.getScoreIndex(sol)] < oldresult:
+					result[self.getScoreIndex(sol)] = oldresult
 
 		return [result[0] + result[1] - result[2], self.getSolScore(task)]
 
