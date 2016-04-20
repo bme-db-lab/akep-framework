@@ -36,7 +36,7 @@ workQueue = queue.Queue(100)
 threadNumber = 20
 exerciseRoots = [None] * 100
 exerciseRootsModifiedTime = [None] * 50
-runEvulatorUser = [True] * 20
+runEvaluatorUser = [True] * 20
 
 #define thread work variable
 exitFlag = False
@@ -94,8 +94,8 @@ class Process:
 		else:
 			if args.allnetwork:
 				for i in range(0, 19):
-					if runEvulatorUser[i]:
-						runEvulatorUser[i] = False
+					if runEvaluatorUser[i]:
+						runEvaluatorUser[i] = False
 						self.__user = i
 						user = 'DB_USERNAME_REPLACE_ME_0'+str(i) if i < 10 else 'DB_USERNAME_REPLACE_ME_'+str(i)
 						break
@@ -152,7 +152,7 @@ class Process:
 	def userpool(self):
 		with queueLock:
 			if self.__user != -1:
-				runEvulatorUser[self.__user] = True
+				runEvaluatorUser[self.__user] = True
 
 	def generateInputStreamFromXML(self, XMLPath, channelName):
 		try:
@@ -558,7 +558,7 @@ class ClientThread(threading.Thread):
 					reloadExerciseXMLs()
 			elif data == b'stat\n':
 				count = 0
-				for user in runEvulatorUser:
+				for user in runEvaluatorUser:
 					if user:
 						count +=1
 				print('Free user: 20/'+str(count))
