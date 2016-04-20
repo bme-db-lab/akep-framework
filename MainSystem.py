@@ -10,7 +10,6 @@ import time
 import datetime
 import argparse
 import sys
-import time
 
 from util.xmlHelper import *
 
