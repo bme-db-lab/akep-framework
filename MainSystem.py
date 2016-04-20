@@ -183,9 +183,10 @@ class Process:
 
 
 	def runSubProcess(self,channelName):
-		print('[Wait '+self.__channelRoots[channelName]['Path']+' script ...]')
+		channel = self.__channelRoots[channelName]
+		print('[Wait '+channel['Path']+' script ...]')
 		inputStream = ''
-		for input in self.__channelRoots[channelName]['InputStream']:
+		for input in channel['InputStream']:
 			if input['fromXML']:
 				inputFromXML = self.generateInputStreamFromXML(input['text'], channelName)
 				if inputFromXML is None:
@@ -194,29 +195,29 @@ class Process:
 			else:
 				inputStream += input['text'] + '\n'
 
-		arguments = self.__channelRoots[channelName]['ParameterString'].replace('=',' ')
+		arguments = channel['ParameterString'].replace('=',' ')
 		arguments = arguments.split(' ')
-		arguments.insert(0,self.__channelRoots[channelName]['Path'])
+		arguments.insert(0,channel['Path'])
 
 		#print(arguments)
-		if self.__channelRoots[channelName]['Entry'] == 'con':
+		if channel['Entry'] == 'con':
 			try:
-				self.__channelRoots[channelName]['con'] = subprocess.Popen(arguments,stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True)
+				channel['con'] = subprocess.Popen(arguments,stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True)
 				time.sleep(1)
 				print(channelName + ' =>  [Script running]')
 			except FileNotFoundError:
 				self.error = True
 				self.sendErrorMessage('[Script not found for channel ' + channelName + ': ' + arguments[0] + ']')
 				return
-		elif self.__channelRoots[channelName]['referenceChannel'] is not None:
-			if self.__channelRoots[channelName]['command'] == 'exit':
-				print('[Killed: '+self.__channelRoots[channelName]['referenceChannel']+']')
-				self.__channelRoots[self.__channelRoots[channelName]['referenceChannel']]['con'].kill()
+		elif channel['referenceChannel'] is not None:
+			if channel['command'] == 'exit':
+				print('[Killed: '+channel['referenceChannel']+']')
+				self.__channelRoots[channel['referenceChannel']]['con'].kill()
 		else:
 			try:
 				with subprocess.Popen(arguments, stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True) as proc:
 					try:
-						self.__channelRoots[channelName]['out'], self.__channelRoots[channelName]['error'] = proc.communicate(input=inputStream,timeout=60)
+						channel['out'], channel['error'] = proc.communicate(input=inputStream,timeout=60)
 					except subprocess.TimeoutExpired:
 						self.__timeout = True
 						print(channelName + ' => [Script timeout]')
@@ -230,14 +231,14 @@ class Process:
 
 
 
-		if self.__channelRoots[channelName]['channelFormat'] == 'xml' and self.__channelRoots[channelName]['Entry'] != 'con':
-			self.__channelRoots[channelName]['out'] = self.__channelRoots[channelName]['out'][self.__channelRoots[channelName]['out'].find('<tasks>'):self.__channelRoots[channelName]['out'].find('</tasks>')+8]
-			#print(self.__channelRoots[channelName]['out'])
+		if channel['channelFormat'] == 'xml' and channel['Entry'] != 'con':
+			channel['out'] = channel['out'][channel['out'].find('<tasks>'):channel['out'].find('</tasks>')+8]
+			#print(channel['out'])
 			try:
-				self.__channelRoots[channelName]['out'] = ET.fromstring(self.__channelRoots[channelName]['out'])
+				channel['out'] = ET.fromstring(channel['out'])
 			except:
 				self.error = True
-				self.sendErrorMessage('[Script output parse error]\nDetails\n'+str(sys.exc_info())+'\nsubprocess:\n'+self.__channelRoots[channelName]['error'] if 'error' in self.__channelRoots[channelName] else '')
+				self.sendErrorMessage('[Script output parse error]\nDetails\n'+str(sys.exc_info())+'\nsubprocess:\n'+channel['error'] if 'error' in channel else '')
 				return
 
 	'''Run the given script with given arguments and inputstream'''
