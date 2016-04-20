@@ -557,10 +557,7 @@ class ClientThread(threading.Thread):
 				with queueLock:
 					reloadExerciseXMLs()
 			elif data == b'stat\n':
-				count = 0
-				for user in runEvaluatorUser:
-					if user:
-						count +=1
+				count = sum(runEvaluatorUser)
 				print('Free user: 20/'+str(count))
 			elif data != b'':
 				with queueLock:
