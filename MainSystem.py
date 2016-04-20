@@ -145,9 +145,9 @@ class Process:
 		return channelRoot
 
 	def replaceIDs(self, param):
-		for key in self.__replace:
-			if self.__replace[key] is not None:
-				param = param.replace('$'+key,self.__replace[key])
+		for key, value in self.__replace.items():
+			if value is not None:
+				param = param.replace('$' + key, value)
 		return param
 
 	def userpool(self):
