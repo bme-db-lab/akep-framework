@@ -47,7 +47,7 @@ def fromLog(input,args):
 	if 'fromLog' in getDictFromArgs(args):
 		logString = re.match('----log----(.*)----log----',input,flags=re.DOTALL).group(1) or ''
 		return re.sub('(^\s+|\s+$)','',logString),True
-	return re.sub('(^\s+|\s+$)','',re.sub('----log----.*----log----','',input,flags=re.DOTALL)),False
+	return re.sub('----log----.*----log----','',input,flags=re.DOTALL).strip(),False
 
 
 #A kimenet oszlopnevei között megtalálható-e minden a paraméterven megadott ','-vel elválasztott oszlopnév
