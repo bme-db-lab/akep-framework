@@ -158,24 +158,23 @@ class Process:
 		try:
 			file = open(XMLPath, 'r').read()
 			xmlRoot = ET.fromstring(file)
-			result = 'print|||<tasks>\n'
+			result = ['print|||<tasks>']
 			for task in xmlRoot.findall('.//task'):
-				result += 'print|||<task n="'+task.get('n')+'">\n'
+				result.append('print|||<task n="'+task.get('n')+'">')
 				if len(task.findall('./subtask')) == 0:
-					result += 'print|||<![CDATA[\n'
-					result += task.text.strip() + '\n'
-					result += 'print|||]]>\n'
+					result.append('print|||<![CDATA[')
+					result.append(task.text.strip())
+					result.append('print|||]]>')
 				else:
 					for subtask in task.findall('./subtask'):
-						result += 'print|||<subtask n="'+subtask.get('n')+'">\n'
-						result += 'print|||<![CDATA[\n'
-						result += subtask.text.strip() + '\n'
-						result += 'print|||]]>\n'
-						result += 'print|||</subtask>\n'
-				result += 'print|||</task>\n'
-			result += 'print|||</tasks>'
-			#print(result)
-			return result
+						result.append('print|||<subtask n="'+subtask.get('n')+'">')
+						result.append('print|||<![CDATA[')
+						result.append(subtask.text.strip())
+						result.append('print|||]]>')
+						result.append('print|||</subtask>')
+				result.append('print|||</task>')
+			result.append('print|||</tasks>')
+			return '\n'.join(result)
 		except:
 			self.error = True
 			self.sendErrorMessage(channelName + '[Script inputStream error]\nDetails\n'+str(sys.exc_info()))
