@@ -11,7 +11,7 @@ import datetime
 import argparse
 import sys
 
-from util.xmlHelper import *
+from util.xmlHelper import ETappendChildTruncating
 
 parser = argparse.ArgumentParser('AKÉP')
 parser.add_argument('-p','--port', metavar='port', help='Server listener portnumber', default=5555, type=int)
