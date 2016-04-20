@@ -10,6 +10,7 @@ import time
 import datetime
 import argparse
 import sys
+import re
 
 from util.xmlHelper import ETappendChildTruncating
 
