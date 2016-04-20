@@ -93,7 +93,6 @@ def cellData(input,param, args):
 	input,res = fromLog(input, args)
 	if res:
 		args = re.sub('fromLog.*;?','',args)
-	rowp = 1 if not res else 0
 
 	rows = input.replace('"','').split('\n')
 	for cell in param.split('|||'):
