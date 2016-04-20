@@ -11,6 +11,7 @@ import datetime
 import argparse
 import sys
 import re
+from glob import iglob
 
 from util.xmlHelper import ETappendChildTruncating
 
@@ -593,19 +594,18 @@ def reloadExerciseXMLs():
 	global exerciseRoots
 	expath = workDir + '/exercises/'
 	#print('[LOAD Exercises from: '+expath+']')
-	for file in os.listdir(expath):
-		if file.endswith('.xml') and file.startswith('exercises.') and len(file.split('.')) == 3:
-			index = int(file.split('.')[1])
-			if exerciseRoots[index] is None or exerciseRootsModifiedTime[index] < os.path.getmtime(expath + file):
-				try:
-					exerciseRoots[index] = ET.parse(expath + file).getroot()
-					exerciseRootsModifiedTime[index] = os.path.getmtime(expath + file)
-					print('Loaded: '+str(index))
-				except:
-					print('XML parse error: '+str(index))
-					if exerciseRoots[index] is None:
-						global exitFlag
-						exitFlag = True
+	for path in iglob(expath + 'exercises.*.xml'):
+		index = int(path.rsplit('.', 2)[1])
+		if exerciseRoots[index] is None or exerciseRootsModifiedTime[index] < os.path.getmtime(path):
+			try:
+				exerciseRoots[index] = ET.parse(path).getroot()
+				exerciseRootsModifiedTime[index] = os.path.getmtime(path)
+				print('Loaded: '+str(index))
+			except:
+				print('XML parse error: '+str(index))
+				if exerciseRoots[index] is None:
+					global exitFlag
+					exitFlag = True
 
 
 def process_data(threadName, q):
