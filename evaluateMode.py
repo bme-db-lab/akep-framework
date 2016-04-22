@@ -50,7 +50,7 @@ def fromLog(input,args):
 	return re.sub('----log----.*----log----','',input,flags=re.DOTALL).strip(),False
 
 
-#A kimenet oszlopnevei között megtalálható-e minden a paraméterven megadott ','-vel elválasztott oszlopnév
+#A kimenet oszlopnevei között megtalálható-e minden a paraméterben megadott ','-vel elválasztott oszlopnév
 def ColumnsEqualParam(input,param, args):
 	input,res = fromLog(input, args)
 	rows = input.split('\n')
