@@ -71,7 +71,7 @@ class Process:
 
 		self.resultXMLRoot = ET.Element('exercise',{'EID':str(exerciseNumber),'LID':str(labNumber), 'User':schema})
 
-		if sol is not None and not os.path.isfile(sol):
+		if labNumber != '1' and sol is not None and not os.path.isfile(sol):
 			print('No exist sol file')
 			self.resultXMLRoot.set('error','No exist sol file: '+sol)
 			self.error = True
