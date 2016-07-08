@@ -11,6 +11,7 @@ import datetime
 import argparse
 import sys
 import re
+import getpass
 from glob import iglob
 
 from util.xmlHelper import ETappendChildTruncating
@@ -26,6 +27,9 @@ workDir = os.path.dirname(os.path.realpath(__file__)) + '/' + args.Epath if args
 
 if workDir[len(workDir) - 1] == '/':
 	workDir = workDir[:-1]
+
+password = getpass.getpass(prompt='Master password: ')
+dbUser = getpass.getpass(prompt='Database user prefix e.g. db_user: ')
 
 print('WorkDir: '+workDir)
 
@@ -62,7 +66,7 @@ class Process:
 		self.__exerciseNumber = exerciseNumber
 
 		self.__replace['schema'] = schema
-		self.__replace['passw'] = 'PASSWORD_REPLACE_ME'
+		self.__replace['passw'] = password
 		self.__replace['workdir'] = workDir
 		self.__replace['sol'] = sol
 		self.__replace['eid'] = str(exerciseNumber)
@@ -98,10 +102,10 @@ class Process:
 					if runEvaluatorUser[i]:
 						runEvaluatorUser[i] = False
 						self.__user = i
-						user = 'DB_USERNAME_REPLACE_ME_0'+str(i) if i < 10 else 'DB_USERNAME_REPLACE_ME_'+str(i)
+						user = dbUser+'_0'+str(i) if i < 10 else dbUser+'_'+str(i)
 						break
 			if user == '':
-				user = 'DB_USERNAME_REPLACE_ME'
+				user = dbUser
 
 		self.__replace['user'] = user
 

@@ -2,7 +2,6 @@
 import re
 import collections
 
-#Visszad egy dictionary-t egy olyan string-ből, melyben ;-vel elválasztott key:value szerepel
 def getDictFromArgs(Args):
 	resDict = collections.defaultdict(list)
 	if Args is None:
@@ -13,9 +12,6 @@ def getDictFromArgs(Args):
 		resDict[key].append(value)
 	return resDict
 
-#Tartalmazza-e a kimenet a paraméterben meadott kifejezéseket (reguláris is lehet) (ÉS,VAGY viszonyban)
-#Multi: kifejezések elválasztása ';' karakterrel
-#használatára a containAnd ill. containOr szolgál
 def contain(input, param, ORType, args):
 	if param.endswith(';'):
 		param = param[:-1]
@@ -28,8 +24,6 @@ def containAnd(input, param, args):
 def containOr(input, param, args):
 	return contain(input, param, True, args)
 
-
-#Az adott paraméter (mely tartalmazhat reguláris kifejezéseket) illeszkedik-e a kapott bemenetre
 def regexpToInput(input, param, args):
 	input,res = fromLog(input, args)
 	if input == '' and param == '':
@@ -42,15 +36,12 @@ def regexpToInput(input, param, args):
 		input = input.replace(skipchar,'')
 	return re.search(param, input, re.DOTALL)
 
-#----LOG---- és ----LOG---- között lévő tartalom egyéb kezelése, ha van fromLog argumentum (értéktől függetlenül)
 def fromLog(input,args):
 	if 'fromLog' in getDictFromArgs(args):
 		logString = re.match('----log----(.*)----log----',input,flags=re.DOTALL).group(1) or ''
 		return logString.strip(),True
 	return re.sub('----log----.*----log----','',input,flags=re.DOTALL).strip(),False
 
-
-#A kimenet oszlopnevei között megtalálható-e minden a paraméterben megadott ','-vel elválasztott oszlopnév
 def ColumnsEqualParam(input,param, args):
 	input,res = fromLog(input, args)
 	rows = input.split('\n')
@@ -63,32 +54,23 @@ def ColumnsEqualParam(input,param, args):
 				find += 1
 				break
 
-	#return set(firstColumns) == set(paramColumns)
 	return find == len(paramColumns)
 
-#A kimenet sorainak száma megegyezik-e a paraméterben kapott számmal
 def rowNumEq(input,param, args):
 	input,res = fromLog(input, args)
 	rowp = 1 if not res else 0
 	return len(input.split('\n')) - rowp == int(param)
 
-#A kimenet sorainak száma >= ? a paraméterben kapott számnál
 def rowNumGrEq(input,param, args):
 	input,res = fromLog(input, args)
 	rowp = 1 if not res else 0
 	return len(input.split('\n')) - rowp >= int(param)
 
-#A kimenet sorainak száma <= ? a paraméterben kapott számnál
 def rowNumLtEq(input,param, args):
 	input,res = fromLog(input, args)
 	rowp = 1 if not res else 0
 	return len(input.split('\n')) - rowp <= int(param)
 
-#Adott kimeneti cella(cellák|sorok) tartalma megegyezik-e a paraméterben megadott cella(cellák|sorok)-al
-#használat:
-#	* sorszám,oszlopszám:érték|||...|||...
-#	* sorszám,oszlopszám::egész sor|||...|||...
-#	* a ||| az összefűzés, jelentése: minden amit néz ÉS kapcsolatban vizsgálja
 def cellData(input,param, args):
 	input,res = fromLog(input, args)
 	if res:
@@ -108,7 +90,7 @@ def cellData(input,param, args):
 			ItContain=False
 			for row in rows:
 				if not allColumnMode and len(row.split(',')) <= int(cellPos[1]):
-					return False #no enough column
+					return False
 				if containAnd(row if allColumnMode else row.split(',')[int(cellPos[1])],cellStr, args):
 					ItContain = True
 					break
@@ -141,13 +123,13 @@ def cellData(input,param, args):
 				return False
 		else:
 			if len(rows) <= int(cellPos[0])+1:
-				return False #no enough row
+				return False
 			if allColumnMode:
 				if not containAnd(rows[int(cellPos[0])+1],cellStr, args):
 					return False
 			else:
 				if len(rows[int(cellPos[0])+1].split(',')) <= int(cellPos[1]):
-					return False #no enough column
+					return False
 				if not containAnd(rows[int(cellPos[0])+1].split(',')[int(cellPos[1])],cellStr, args):
 					return False
 	return True
