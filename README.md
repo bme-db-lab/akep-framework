@@ -36,10 +36,9 @@ python3 MainSystem.py -p PORT -E EXERCISE_XML_PATH [-L MAX_OUT_SIZE -a]
 
 ## Parancsok (socket csatlakozása után):
 -	Feladat beadása:
-
-```<feladatlap azonosító>,<labor azonosító>,<vizsgálandó hallgató azonosítója><[,hallgató forráskódjának elérhetősége]```
--	Socket lezárása:```exit```
--	Feladatleírók újra töltése:```Reload```
+	`<feladatlap azonosító>,<labor azonosító>,<vizsgálandó hallgató azonosítója>[,<hallgató forráskódjának elérhetősége>]`
+-	Socket lezárása: `exit`
+-	Feladatleírók újra töltése: `reload`
 
 ## Feladatleírók (feladatsorok/feladatlapok) felépítése:
 TODO XSD
@@ -51,27 +50,49 @@ Példa XML: TODO
 ## Javítási mechanizmus leírása:
 Az AKÉP mielőtt nekiállna a kapott feladat javításához lefuttatja hozzá az összes csatornán meghatározott előfeldolgozókat. Az előfeldolgozók által nyert kimenetet elmenti, majd megkezdi a javítást. 
 
-**Csatorna**: egy csomagba foglalja a futtatandó program útvonalát (előfeldolgozót/preprocesszort) az annak átadott argumentumokat, a CLI-re adott inputokat valamint a futtatás időpontját, mely a következő lehet:
--	pre: A fő előfeldolgozó előtt futtatja.
--	post: A fő elődolgozó után futtatja.
--	con: A fő elődolgozóval párhuzamosan futtatja.
+**Csatorna**: egy nevével azonosított csomagba foglalja a futtatandó program útvonalát (előfeldolgozót/preprocesszort) az annak átadott argumentumokat, a CLI-re adott inputokat valamint a futtatás időpontját, mely a következő lehet:
+-	`pre`: A fő előfeldolgozó előtt futtatja.
+-	`post`: A fő elődolgozó után futtatja.
+-	`con`: A fő elődolgozóval párhuzamosan futtatja.
+-	`main`: A fő elődolgozó. Csak egy definiálható. Megadható közvetlenül az `<exercise>` TAG argumentumaként is. Ebből csak egy lehet, és a neve mindig Main (a channelName argumentum lététől és értékétől függetlenül).
 
 Pl:
 ```xml
-<script entry="pre" channelName="Source" scriptPath="$workdir/getSomething.py" arguments="-E=$sol"/>
+<script entry="pre" channelName="Source" scriptPath="$workdir/getSomething.py" arguments="-E=$sol">
+	<inputstream>Opcionális üzenet a csatorna STDIN-jére: 1. sor</inputstream>
+	<inputstream>2. sor</inputstream>
+</script>
 ```
-A ```scriptPath```-ban meghatározott útvonalon lévő programot elindítja, majd argumentumként utána helyezi a ```$sol```-t, amit helyettesít a keretrendszer a parancsban kapott útvonallal. Mindezt még az előtt (```entry=”pre”```) lefuttatja mielőtt az ```<exercise>```-ban meghatározott fő előfeldolgozót végrehajtaná. A kapott kimenetet ezek után egy tesztnél a ```channelName```-ben meghatározott név alapján lehet elérni (lentebb található példa). Az itt nem szereplő ```channelFormat``` meghatározza, hogy a kimenetnek milyen formai tulajdonságoknak kell megfelelnie (pl. xml), ha ennek nem felel meg, a végrehajtás már itt megszakad.
 
-Több a ```$sol```-hoz hasonló joker helyezhető el a feladatleíróban:
--	```passw```: Az AKÉP futtatásnál megadott mesterjelszó.
--	```workdir```: Az AKÉP futtatásnál megadott feladatleírókat tartalmazó munkakönyvtár.
--	```sol```: A socketen kapott parancsban megadott elérési útvonal.
--	```eid```: Feladatsor azonosító.
+A `scriptPath`-ban meghatározott útvonalon lévő programot elindítja, majd argumentumként utána helyezi a `$sol`-t, amit helyettesít a keretrendszer a parancsban kapott útvonallal. Mindezt még az előtt (`entry=”pre”`) lefuttatja mielőtt az `<exercise>`-ban meghatározott fő előfeldolgozót végrehajtaná. A kapott kimenetet ezek után egy tesztnél a `channelName`-ben meghatározott név alapján lehet elérni (lentebb található példa). Az itt nem szereplő `channelFormat` meghatározza, hogy a kimenetnek milyen formai tulajdonságoknak kell megfelelnie (pl. xml), ha ennek nem felel meg, a végrehajtás már itt megszakad.
+
+A következő két példatöredék ekvivalensen írja le a fő előfeldolgozót (Main csatornát):
+```xml
+<exercise n="2" ... >
+	<script entry="main" channelName="Main" scriptPath="$workdir/mainPreprocessorForLab2.py" arguments="-E=$sol">
+		<inputstream>Opcionális üzenet a csatorna STDIN-jére: 1. sor</inputstream>
+		<inputstream>2. sor</inputstream>
+	</script>
+	<!-- ... -->
+</exercise>
+
+<exercise n="2" scriptPath="$workdir/mainPreprocessorForLab2.py" arguments="-E=$sol">
+	<inputstream>Opcionális üzenet a csatorna STDIN-jére: 1. sor</inputstream>
+	<inputstream>2. sor</inputstream>
+	<!-- ... -->
+</exercise>
+```
+
+Több a `$sol`-hoz hasonló joker helyezhető el a feladatleíróban:
+-	`$passw`: Az AKÉP futtatásnál megadott mesterjelszó.
+-	`$workdir`: Az AKÉP futtatásnál megadott feladatleírókat tartalmazó munkakönyvtár.
+-	`$sol`: A socketen kapott parancsban megadott elérési útvonal.
+-	`$eid`: Feladatsor azonosító.
 
 A már szöveges formában lévő eredmény javításához számos javítási algoritmus érhető el. Ezek az evaluateMode.py-ban találhatóak meg és bővíthetőek. Az itt meghatározott, javításnál felhasználható függvények mindegyike három paraméterrel rendelkezik:
--	input: Az előfeldolgozóból megkapott eredmény az adott feladathoz.
--	param: Az adott tesztnél meghatározott adott javítási algoritmusnak megfelelő szintaxissal leírt javítási bemenet.
--	args: Egyéb átadható paraméterlista (dictionary formátum) (pl: fromLog:true, stb.)
+-	`input`: Az előfeldolgozóból megkapott eredmény az adott feladathoz.
+-	`param`: Az adott tesztnél meghatározott adott javítási algoritmusnak megfelelő szintaxissal leírt javítási bemenet.
+-	`args`: Egyéb átadható paraméterlista (dictionary formátum) (pl: `fromLog:true`, stb.)
 
 Az adott teszthez pl. a következőképp határozható meg a futtatandó javító függvényt:
 ```xml
@@ -84,8 +105,6 @@ param
 </task>
 ```
 
-Ez a példa a 2.2 jelölésű feladatblokkban lévő kimenetet küldi el a regexpToInput függvénynek. A kimenet lesz a függvény input paramétere és a <solution> tagek között meghatározott tartalom pedig a param paramétere.
+Ez a példa a 2.2 jelölésű feladatblokkban lévő kimenetet küldi el a `regexpToInput` függvénynek. A kimenet lesz a függvény input paramétere és a `<solution>` tagek között meghatározott tartalom pedig a param paramétere.
 
-A teszteknél lehetőség van csatornát választani. A channelName egy mutató arra a csatornára, amit exercise/script-ban határoztunk meg. Amennyiben ezt nem határozzuk meg, úgy az adott teszt az exercise-ban meghatározott konfigurációjú előfeldolgozó kimenetét nézi.
-
-
+A teszteknél lehetőség van csatornát választani. A `channelName` egy mutató arra a csatornára, amit exercise/script-ban határoztunk meg. Amennyiben ezt nem határozzuk meg, úgy az adott teszt az exercise-ban meghatározott konfigurációjú fő előfeldolgozó kimenetét nézi.
