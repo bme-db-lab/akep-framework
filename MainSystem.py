@@ -114,10 +114,10 @@ class Process:
 		else:
 			self.__replace['portNumber'] = str(14999)
 
-		# Main script can either be defined in the exercise tag as well as a children script[@entry='main'] tag.
+		# Main script can either be defined in the exercise tag (this way is deprecated) as well as a children script[@entry='main'] tag.
 		if exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]').get('scriptPath') is not None:
 			self.__channelRoots['Main'] = self.script(exerciseRoots[exerciseNumber].find('./exercise[@n="'+labNumber+'"]'))
-			print('*')
+			print('Warning: main channel definition in the exercise tag itself is deprecated at Lab: ' + str(labNumber) + ' ExNu: ' + str(exerciseNumber))
 		for scriptInit in exerciseRoots[exerciseNumber].findall('./exercise[@n="'+labNumber+'"]/script'):
 			channelName=scriptInit.get('channelName') if scriptInit.get('entry') != 'main' else 'Main'
 			if channelName not in self.__channelRoots:
