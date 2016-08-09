@@ -10,7 +10,11 @@
 					<xs:field xpath="@channelName" /> 
 				</xs:unique>
 				<xs:unique name="uniqueTaskIdentifier">
-					<xs:selector xpath="task" /> 
+					<xs:selector xpath=".//task" /> 
+					<xs:field xpath="@n"/> 
+				</xs:unique>
+				<xs:unique name="uniqueSubTaskIdentifier">
+					<xs:selector xpath=".//subtask" /> 
 					<xs:field xpath="@n"/> 
 				</xs:unique>
 			</xs:element>
@@ -22,26 +26,12 @@
 	</xs:unique>
 </xs:element>
 
-<xs:element name="task" type="taskType">
-	<xs:unique name="uniqueSubTaskIdentifier">
-		<xs:selector xpath="subtask" /> 
-		<xs:field xpath="@n"/> 
-	</xs:unique>
-</xs:element>
-
-<xs:element name="solution" type="solutionType"/>
-
 <xs:complexType name="exerciseType">
 	<xs:sequence>
 		<xs:element name="script" type="scriptType" maxOccurs="unbounded"/>
 		<xs:element name="info" type="infoType" maxOccurs="1" minOccurs="0"/>
-		<xs:element name="taskgroup" type="taskgroupType" maxOccurs="unbounded" minOccurs="0">
-			<xs:unique name="uniqueTaskIdentifier2">
-				<xs:selector xpath="task" /> 
-				<xs:field xpath="@n"/> 
-			</xs:unique>
-		</xs:element>
-		<xs:element ref="task" maxOccurs="unbounded" minOccurs="0"/>		
+		<xs:element name="taskgroup" type="taskgroupType" maxOccurs="unbounded" minOccurs="0"/>
+		<xs:element name="task" type="taskType" maxOccurs="unbounded" minOccurs="0"/>		
     </xs:sequence>
 	<xs:attribute name="n" type="xs:string"  use="required"/>
 	<xs:attribute name="reference" type="xs:integer" />
@@ -49,7 +39,7 @@
 
 <xs:complexType name="scriptType">
 	<xs:sequence>
-		<xs:element name="inputstream" type="xs:string" maxOccurs="unbounded" minOccurs="0"/>
+		<xs:element name="inputstream" type="inputstreamType" maxOccurs="unbounded" minOccurs="0"/>
 	</xs:sequence>
 	<xs:attribute name="scriptPath"	type="xs:string" />
 	<xs:attribute name="arguments" type="xs:string" />
@@ -60,10 +50,18 @@
 	<xs:attribute name="command" type="commandType" />
 </xs:complexType>
 
+<xs:complexType name="inputstreamType">
+	<xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="fromXML" type="xs:string" />
+      </xs:extension>
+    </xs:simpleContent>	
+</xs:complexType>
+
 <xs:complexType name="taskgroupType">
 	<xs:sequence>
 		<xs:element name="info" type="infoType" maxOccurs="1" minOccurs="0"/>
-		<xs:element ref="task" maxOccurs="unbounded"/>		
+		<xs:element name="task" type="taskType" maxOccurs="unbounded"/>		
 	</xs:sequence>
 	<xs:attributeGroup ref="taskCommonAttrGroup"/>	
 </xs:complexType>
@@ -100,7 +98,7 @@
 </xs:attributeGroup>
 
 <xs:attributeGroup name="taskCommonAttrGroup">
-  <xs:attribute name="n" type="xs:string"/>
+  <xs:attribute name="n" type="xs:string" use="required"/>
   <xs:attribute name="title" type="xs:string"/>
   <xs:attribute name="comment" type="xs:string"/>
   <xs:attribute name="reference" type="xs:integer"/>
@@ -113,7 +111,7 @@
 	<xs:sequence>
 		<xs:group ref="taskCommonGroup"/>
 		<xs:element name="subtask" type="subtaskType" maxOccurs="unbounded" minOccurs="0"/>
-		<xs:element ref="solution" maxOccurs="unbounded" minOccurs="0"/>
+		<xs:element name="solution" type="solutionType" maxOccurs="unbounded" minOccurs="0"/>
 	</xs:sequence>
 	<xs:attributeGroup ref="taskCommonAttrGroup"/>	
 </xs:complexType>
@@ -136,7 +134,7 @@
 <xs:complexType name="subtaskType">
 	<xs:sequence>
 		<xs:group ref="taskCommonGroup"/>
-		<xs:element ref="solution" maxOccurs="unbounded"/>
+		<xs:element name="solution" type="solutionType" maxOccurs="unbounded"/>
 	</xs:sequence>
 	<xs:attributeGroup ref="taskCommonAttrGroup"/>
 </xs:complexType>

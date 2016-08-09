@@ -41,12 +41,17 @@ python3 MainSystem.py -p PORT -E EXERCISE_XML_PATH [-L MAX_OUT_SIZE -a]
 -	Feladatleírók újra töltése: `reload`
 
 ## Feladatleírók (feladatsorok/feladatlapok) felépítése:
-TODO XSD
+`akep-exercise.xsd`
 
 **Megjegyzés**: Az opcionális paraméterek (pl. tasktext, description) belekerülnek a feladatstruktúrának megfelelően a kimenetbe is, így azok felhasználhatók egy a javítóknak szánt áttekintő felületen megjelenített tartalomba az értékelés eredménye és mechanizmusa mellett. Javasolt itt leírni a feladatokat és emberi megfogalmazásban a javítási mechanizmust is, hogy az tetszőleges feladatlap generálására is felhasználható legyen (javítónak, hallgatónak, stb.).
 
 ## Kimenet felépítése:
-Példa XML: TODO
+
+### XML típusú csatornánál:
+A `script` tag-ben default a `channelFormat` attribútum xml-re van beállítva. Az előfeldolgozó kimenetének - amennyiben ezt az attribútumot nem állítjuk át - az `akep-XMLChannel.xsd`-nek kell megfelelnie.
+
+### A keretrendszer által adott kimenet:
+TODO
 
 ## Javítási mechanizmus leírása:
 Az AKÉP mielőtt nekiállna a kapott feladat javításához lefuttatja hozzá az összes csatornán meghatározott előfeldolgozókat. Az előfeldolgozók által nyert kimenetet elmenti, majd megkezdi a javítást. 
@@ -68,20 +73,13 @@ Pl:
 
 A `scriptPath`-ban meghatározott útvonalon lévő programot elindítja, majd argumentumként utána helyezi a `$sol`-t, amit helyettesít a keretrendszer a parancsban kapott útvonallal. Mindezt még az előtt (`entry=”pre”`) lefuttatja mielőtt az `<exercise>`-ban meghatározott fő előfeldolgozót végrehajtaná. A kapott kimenetet ezek után egy tesztnél a `channelName`-ben meghatározott név alapján lehet elérni (lentebb található példa). Az itt nem szereplő `channelFormat` meghatározza, hogy a kimenetnek milyen formai tulajdonságoknak kell megfelelnie (pl. xml), ha ennek nem felel meg, a végrehajtás már itt megszakad.
 
-A következő két példatöredék ekvivalensen írja le a fő előfeldolgozót (Main csatornát):
+A következő példatöredék írja le a fő előfeldolgozót (Main csatornát):
 ```xml
 <exercise n="2" ... >
 	<script entry="main" channelName="Main" scriptPath="$workdir/mainPreprocessorForLab2.py" arguments="-E=$sol">
 		<inputstream>Opcionális üzenet a csatorna STDIN-jére: 1. sor</inputstream>
 		<inputstream>2. sor</inputstream>
 	</script>
-	<!-- ... -->
-</exercise>
-
-<!-- ez a változat deprecated -->
-<exercise n="2" scriptPath="$workdir/mainPreprocessorForLab2.py" arguments="-E=$sol">
-	<inputstream>Opcionális üzenet a csatorna STDIN-jére: 1. sor</inputstream>
-	<inputstream>2. sor</inputstream>
 	<!-- ... -->
 </exercise>
 ```
