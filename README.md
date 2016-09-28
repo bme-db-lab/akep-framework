@@ -1,5 +1,5 @@
 # AKÉP
-A mostani mandatory verzióváltást követően a readme.md frissítése szükséges
+A mostani mayor verzióváltást követően a readme.md frissítése szükséges
  
 ## Rövid leírás:
 AKÉP=Automatikus kiértékelő és pontozó rendszer.
