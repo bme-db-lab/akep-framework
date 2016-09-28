@@ -1,5 +1,6 @@
 # AKÉP
-
+A mostani mandatory verzióváltást követően a readme.md frissítése szükséges
+ 
 ## Rövid leírás:
 AKÉP=Automatikus kiértékelő és pontozó rendszer.
 
@@ -11,47 +12,60 @@ Az AKÉP keretrendszere már csak szöveg alapú környezetben dolgozik, így a 
 ## Futtatás:
 
 ```shell
-python3 MainSystem.py -p PORT -E EXERCISE_XML_PATH [-L MAX_OUT_SIZE -a]
+python3 main.py -p CONF_PATH - l LOG_PATH -s ECERCISE_SCHEMA_PATH -c CHANNEL_INPUT_SCHEMA_PATH
 ```
 
-**PORT**: Ezen a porton hallgatózik. \(int, req, def=5555\)
+**CONF_PATH**: Itt keresi a lokális konfigurációs fájlt. \(str, opt, def='./akep.local.cfg'\)
 
-**EXERCISE_XML_PATH**: A feladatleírókat tartalmazó könyvtár relatív útvonala. \(str, req, def=’.’\)
+**LOG_PATH**: A logolást ide fogja írni egy fájlba. \(str, req, def='./akep.log'\)
 
-**MAX_OUT_SIZE**: Az adott teszt kimenetének vágása a megadott hosszra \(int, def=2000\)
+**ECERCISE_SCHEMA_PATH**: Itt keresi a feladatleíró xml-ek megkövetelt sémáját \(str,req,def='../schema/akep-exercises.xsd'\)
 
-**-a kapcsoló**: Összes interfészen hallgatózik. \(def: false\)
-
-### Egyéb konfigurációs paraméterek:
-**workQueue**: Feldolgozási sor maximális hossza.
-
-**threadNumber**: Munkaszálak maximális száma.
-
-**userNumber**: Más rendszerbe beléptethető felhasználók maximális száma.
+**CHANNEL_INPUT_SCHEMA_PATH**: Itt keresi a csatornák bemenetének megkövetelt sémáját (amennyiben az adott csatona így van konfigurálva)\(str, opt, def: '../schema/akep-XMLChannel.xsd'\)
 
 ### Futtatás menete:
-1.	Elindítás a fent megadott módon. Indulásnál kérni fog egy mesterjelszót (más rendszerek, pl. adatbázishoz) és felhasználó előtagot (melyet más rendszerekbe való belépéseknél kiegészít egy számmal is, ami maximum a userNumber-1-et éri el).
+1.	Elindítás a fent megadott módon. Amennyiben nem talál maga mellett akep.cfg-t a main.py hibával kilép. (részletek lejjebb)
 2.	Az AKÉP a meghatározott porton és interfészen várja a parancsokat (lejjebb található)
 3.	Párhuzamosan hajtja végre a kapott parancsokat, az eredményt pedig a parancsot adó socketen küldi vissza.
 
+### AKEP.cfg
+Minimális meg kell adni a következő kulcs érték párokat: Ezek a kulcsok egyébként foglaltak a configurációs hierarchiában nem írhatók felül
+"host":"a cím amin figyel",
+"port":a port amin figyel (int),
+"exercisesPath":"a feladatleírók elérési helye",
+Ez itt opcionális de ugyenúgy a beépített kezelt kulcsok közé tartozik
+"notCopyFromDescrtiption":["script","info","exerciseKeys"] -> ezeket a tag-eket nem teszi bele az értékelés utáni kimenetbe a feladatleíróból
+}
+
 ## Parancsok (socket csatlakozása után):
--	Feladat beadása:
-	`<feladatlap azonosító>,<labor azonosító>,<vizsgálandó hallgató azonosítója>[,<hallgató forráskódjának elérhetősége>]`
--	Socket lezárása: `exit`
--	Feladatleírók újra töltése: `reload`
+-	Feladat beadása JSON objektumban történik:
+	`{"ownerID":"user","exerciseID":"id","runUserGroup":"normal","solutionDir":"./sol"}`
+	Ebből az objektmból az ownerID és az exerciseID meghatározása kötelező is lehetne, de igazából az akép a konfigurációs láncon végigmegy amikor lekér egy kulcshoz tartozó értéket, így ha az ott van pl. az akep.local.cfg-ben akkor nincs gond (bár ez elég értelmetlen eset)
+-	Socket lezárása: Az AKÉP automatikusan lezárja a socketet és visszaküldi a kiértékelést
 
 ## Feladatleírók (feladatsorok/feladatlapok) felépítése:
 `akep-exercise.xsd`
 
-**Megjegyzés**: Az opcionális paraméterek (pl. tasktext, description) belekerülnek a feladatstruktúrának megfelelően a kimenetbe is, így azok felhasználhatók egy a javítóknak szánt áttekintő felületen megjelenített tartalomba az értékelés eredménye és mechanizmusa mellett. Javasolt itt leírni a feladatokat és emberi megfogalmazásban a javítási mechanizmust is, hogy az tetszőleges feladatlap generálására is felhasználható legyen (javítónak, hallgatónak, stb.).
+**Megjegyzés**: Az opcionális paraméterek (pl. tasktext, description) belekerülnek a feladatstruktúrának megfelelően a kimenetbe is, így azok felhasználhatók egy a javítóknak szánt áttekintő felületen megjelenített tartalomba az értékelés eredménye és mechanizmusa mellett. Javasolt itt leírni a feladatokat emberi megfogalmazásban a javítási mechanizmust is, hogy az tetszőleges feladatlap generálására is felhasználható legyen (javítónak, hallgatónak, stb.).
 
-## Kimenet felépítése:
-
-### XML típusú csatornánál:
-A `script` tag-ben default a `channelFormat` attribútum xml-re van beállítva. Az előfeldolgozó kimenetének - amennyiben ezt az attribútumot nem állítjuk át - az `akep-XMLChannel.xsd`-nek kell megfelelnie.
-
-### A keretrendszer által adott kimenet:
+## AKÉP feldolgozási folyamat
 TODO
+
+## Csatornába érkező adat konfigurálása:
+
+### INLINE típusú csatornánál:
+TODO
+
+### EXTARNAL típusú csatornánál:
+TODO
+
+### CHANNELOUTPUT típusú csatornánál:
+TODO
+
+## A keretrendszer által adott kimenet:
+Megegyezik a feladatleíró tartalmával a következőket kivéve:
+- Minden solution tag parent task tagjébe bekerül a hivatkozott channel kimenete az adott taskra output tag-be
+- Errorok bekerülnek az adott solution-be vagy taskba error attribútumba/output tag-be
 
 ## Javítási mechanizmus leírása:
 Az AKÉP mielőtt nekiállna a kapott feladat javításához lefuttatja hozzá az összes csatornán meghatározott előfeldolgozókat. Az előfeldolgozók által nyert kimenetet elmenti, majd megkezdi a javítást. 
@@ -60,23 +74,22 @@ Az AKÉP mielőtt nekiállna a kapott feladat javításához lefuttatja hozzá a
 -	`pre`: A fő előfeldolgozó előtt futtatja.
 -	`post`: A fő elődolgozó után futtatja.
 -	`con`: A fő elődolgozóval párhuzamosan futtatja.
--	`main`: A fő elődolgozó. Csak egy definiálható, és a neve mindig Main (a channelName argumentum lététől és értékétől függetlenül).
-	- Megadható közvetlenül az `<exercise>` TAG argumentumaként is, de ez a megadási mód deprecated.
+-	`main`: A fő dolgozó.
 
 Pl:
 ```xml
-<script entry="pre" channelName="Source" scriptPath="$workdir/getSomething.py" arguments="-E=$sol">
+<script entry="pre" name="Source" scriptPath="$workdir$/getSomething.py" arguments="-E $sol$">
 	<inputstream>Opcionális üzenet a csatorna STDIN-jére: 1. sor</inputstream>
 	<inputstream>2. sor</inputstream>
 </script>
 ```
 
-A `scriptPath`-ban meghatározott útvonalon lévő programot elindítja, majd argumentumként utána helyezi a `$sol`-t, amit helyettesít a keretrendszer a parancsban kapott útvonallal. Mindezt még az előtt (`entry=”pre”`) lefuttatja mielőtt az `<exercise>`-ban meghatározott fő előfeldolgozót végrehajtaná. A kapott kimenetet ezek után egy tesztnél a `channelName`-ben meghatározott név alapján lehet elérni (lentebb található példa). Az itt nem szereplő `channelFormat` meghatározza, hogy a kimenetnek milyen formai tulajdonságoknak kell megfelelnie (pl. xml), ha ennek nem felel meg, a végrehajtás már itt megszakad.
+A `scriptPath`-ban meghatározott útvonalon lévő programot elindítja, majd argumentumként utána helyezi a `$sol$`-t, amit helyettesít a keretrendszer a parancsban kapott útvonallal. Mindezt még az előtt (`entry=”pre”`) lefuttatja mielőtt az `<exercise>`-ban meghatározott fő előfeldolgozót végrehajtaná. A kapott kimenetet ezek után egy tesztnél a `name`-ben meghatározott név alapján lehet elérni (lentebb található példa). 
 
-A következő példatöredék írja le a fő előfeldolgozót (Main csatornát):
+A következő példatöredék írja le a fő dolgozót:
 ```xml
 <exercise n="2" ... >
-	<script entry="main" channelName="Main" scriptPath="$workdir/mainPreprocessorForLab2.py" arguments="-E=$sol">
+	<script entry="main" name="Main" scriptPath="$workdir$/mainPreprocessorForLab2.py" arguments="-E $sol$">
 		<inputstream>Opcionális üzenet a csatorna STDIN-jére: 1. sor</inputstream>
 		<inputstream>2. sor</inputstream>
 	</script>
@@ -84,11 +97,12 @@ A következő példatöredék írja le a fő előfeldolgozót (Main csatornát):
 </exercise>
 ```
 
-Több a `$sol`-hoz hasonló joker helyezhető el a feladatleíróban:
--	`$passw`: Az AKÉP futtatásnál megadott mesterjelszó.
--	`$workdir`: Az AKÉP futtatásnál megadott feladatleírókat tartalmazó munkakönyvtár.
--	`$sol`: A socketen kapott parancsban megadott elérési útvonal.
--	`$eid`: Feladatsor azonosító.
+Több a `$sol$`-hoz hasonló joker helyezhető el a feladatleíróban. Ezek a konfigurációs hierarchiából keresődnek ki.
+
+### Konfigurációs hierarchia
+A következő: akep.cfg > akep.local.cfg > adott exercise.xml-ben definiált `exerciseKeys`-ben ```xml <Key key="key">value</Key>``` formában > az akép sosketServernek adott JSON objektumban szintén key:value formában.
+A hierarhia jobbról balra haladva csökken. Ha egy key-hez nincs value, akkor exeption dobódik, a végrehajtás befejeződik.
+Azon value-mely @-al kezdődik a python eval függvénnyel értékelődik ki és ennek eredménye kerül az adott key joker helyére.
 
 A már szöveges formában lévő eredmény javításához számos javítási algoritmus érhető el. Ezek az evaluateMode.py-ban találhatóak meg és bővíthetőek. Az itt meghatározott, javításnál felhasználható függvények mindegyike három paraméterrel rendelkezik:
 -	`input`: Az előfeldolgozóból megkapott eredmény az adott feladathoz.
@@ -106,6 +120,9 @@ param
 </task>
 ```
 
-Ez a példa a 2.2 jelölésű feladatblokkban lévő kimenetet küldi el a `regexpToInput` függvénynek. A kimenet lesz a függvény input paramétere és a `<solution>` tagek között meghatározott tartalom pedig a param paramétere.
+Ez a példa a 2.2 jelölésű feladatblokkban lévő Source csatorna kimenetét küldi el a `regexpToInput` függvénynek. A kimenet lesz a `evaluateMode`-al meghatározott függvény input paramétere és a `<solution>` tagek között meghatározott tartalom pedig a param paramétere.
 
-A teszteknél lehetőség van csatornát választani. A `channelName` egy mutató arra a csatornára, amit exercise/script-ban határoztunk meg. Amennyiben ezt nem határozzuk meg, úgy az adott teszt az exercise-ban meghatározott konfigurációjú fő előfeldolgozó kimenetét nézi.
+A teszteknél lehetőség van csatornát választani. A `channelName` egy mutató arra a csatornára, amit exercise/script-ban határoztunk meg. Ennek meghatározása kötelező, amennyiben ezt nem tesszük meg az adott solution csoportként kezelődik
+
+## Értékelési kifejezések leírása az AKÉP formális nyelvében:
+TODO

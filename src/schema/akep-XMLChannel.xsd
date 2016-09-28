@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+<xs:element name="tasks">
+<xs:complexType>
+		<xs:sequence>
+			<xs:element name="task" maxOccurs="unbounded">
+				<xs:complexType>
+					<xs:simpleContent>
+						<xs:extension base="xs:string">
+						<xs:attribute name="n"	type="xs:string" use="required"/>
+						</xs:extension>
+					</xs:simpleContent>	
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>		
+	</xs:complexType>
+	<xs:unique name="uniqueTaskIdentifier">
+			<xs:selector xpath="task" /> 
+			<xs:field xpath="@n" /> 
+	</xs:unique>
+</xs:element>
+
+</xs:schema>

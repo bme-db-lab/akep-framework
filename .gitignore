@@ -1,4 +1,7 @@
 __pycache__
+*.cfg
+*.log
+command.my
 
 # source is in README.md
 README.html
