@@ -7,8 +7,6 @@ import copy
 import re
 import operator
 
-
-class evaluate:
 '''
 Evaluate Modul
 This modul evaluates all //solution element, which contain 
@@ -25,6 +23,8 @@ If you use and relationship between solutions and continer solution does not hav
 score akep will give subscore.
 evaluateMode required value, which reference the function name from evaluateFunctions
 '''
+class evaluate:
+
     def __init__(self,channels,resultContent, logger):
         '''Constructor
         channels = channel class instance

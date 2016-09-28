@@ -33,17 +33,31 @@ class resultContent:
     def referenceFormating(self):
         self.referenceProcessor(self.resultXMLRoot,self.resultXMLRoot.get(REFERENCE_EXERCISE),self.resultXMLRoot.get(REFERENCE_ID),self.resultXMLRoot.get(REF_CHILDREN_FIND))
         for element in self.getAll(attrName=REFERENCE_EXERCISE):
-            self.referenceProcessor(element,task.get(REFERENCE_EXERCISE),task.get(REFERENCE_ID),task.get(REF_CHILDREN_FIND))
+            self.referenceProcessor(element,element.get(REFERENCE_EXERCISE),element.get(REFERENCE_ID),element.get(REF_CHILDREN_FIND))
 
     def referenceProcessor(self, element, referenceExercise, referenceWithinExercise = None, referenceChildrenFind = None):
+        if referenceExercise is None:
+            return
         if referenceExercise not in self.exerciseRoots:
             raise AKEPException(ERROR['NOT_FIND']['EXERCISE_TO_ID']+referenceExercise)
         remoteElement = self.getAll(attrName=REFERENCE_TARGET_ID, attrValue=referenceWithinExercise, element = self.exerciseRoots[referenceExercise]) if referenceWithinExercise is not None else self.exerciseRoots[referenceExercise]
         if remoteElement is None:
             element.set(TO_ELEMENT_ERROR_ATTR,'ReferenceError')
             return
-        for child in (remoteElement if referenceChildrenFind is None else self.getAll(findText = referenceChildrenFind, element = remoteElement)):
-            element.append(copy.deepcopy(child))
+
+        elementParent = None
+        if element.get('refPlaceholder') is not None:
+            elementParent = element.getparent()
+            elementStartInd = elementParent.index(element)
+            elementParent.remove(element)
+
+        for ind,child in enumerate(remoteElement if referenceChildrenFind is None else self.getAll(findText = referenceChildrenFind, element = remoteElement)):
+            print(elementParent)
+            if elementParent is None:
+                element.append(copy.deepcopy(child))
+            else:
+                print(child)
+                elementParent.insert(elementStartInd+ind,copy.deepcopy(child))
         
     def keyBinding(self, element = None):
         elementText = etree.tostring(self.resultXMLRoot if element is None else element).decode('utf-8')

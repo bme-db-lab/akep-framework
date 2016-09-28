@@ -1,38 +1,43 @@
 ##########################
 # Schema definition keys #
 ##########################
+# to reference system
 REFERENCE_EXERCISE = 'reference'
 REFERENCE_ID = 'reference-id'
 REFERENCE_TARGET_ID = 'id'
-EXERCISE = 'exercise'
-CHANNEL_NAME_ATTR = 'name'
-NO_CONTINUE_AFTER_ERROR = 'noConAfterError'
-TASKTAG = 'task'
-ENTRY_ATTR = 'entry'
-CH_CHAIN_CONT_COND_TYPE = ['stdout','stderr']
-TASK_ELEMENT_ID = 'n'
-TO_ELEMENT_ERROR_ATTR = 'error'
-SCORE_TYPE = ['bonus','minus']
-SOLUTION_CH_NAME = 'channelName'
-EVULATION_MODE_ATTR = 'evaluateMode'
-CH_OUT_TOTASK = 'output'
-SOL_SCORE_TYPE = 'scoreType'
-SCORE_ATTR = 'score'
-FROM_CAHNNEL = 'fromChannel'
-SCRIPT_INPUT_TYPE = ['inline','external','channelOutput']
-NOT_COPY_TO_RESULT_ATTR = 'resultXML'
-SOLUTION_TAG = 'solution'
-EXERCISE_VARIABLES = 'exerciseKeys'
 REF_CHILDREN_FIND = 'refChildrenFind'
-NOT_COPY_TO_RESULT_ATTR = 'resultXML'
-OWNER_ID = 'ownerID'
-EXERCISE_ID = 'exerciseID'
+# to channel system
+CH_CHAIN_CONT_COND_TYPE = ['stdout','stderr']
+NO_CONTINUE_AFTER_ERROR = 'noConAfterError'
 CH_INPUTSTREAM = 'inputstream'
 CH_INPUT_TYPE = 'inputType'
 CH_INPUTTO = 'inputTo'
 CH_PATH = 'path'
 CH_CHAIN_CONT_COND = 'continueCondStream'
 CH_ENTRY_ORDER = ['pre','con','main','post']
+CH_OUT_TOTASK = 'output'
+FROM_CAHNNEL = 'fromChannel'
+SCRIPT_INPUT_TYPE = ['inline','external','channelOutput']
+# to evaluate system
+SCORE_TYPE = ['bonus','minus']
+SOLUTION_CH_NAME = 'channelName'
+EVULATION_MODE_ATTR = 'evaluateMode'
+SOL_SCORE_TYPE = 'scoreType'
+SCORE_ATTR = 'score'
+# general
+EXERCISE = 'exercise'
+CHANNEL_NAME_ATTR = 'name'
+TASKTAG = 'task'
+ENTRY_ATTR = 'entry'
+TASK_ELEMENT_ID = 'n'
+TO_ELEMENT_ERROR_ATTR = 'error'
+NOT_COPY_TO_RESULT_ATTR = 'resultXML'
+SOLUTION_TAG = 'solution'
+EXERCISE_VARIABLES = 'exerciseKeys'
+NOT_COPY_TO_RESULT_ATTR = 'resultXML'
+OWNER_ID = 'ownerID'
+EXERCISE_ID = 'exerciseID'
+
 
 #####################
 # Main program keys #

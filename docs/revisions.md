@@ -1,4 +1,6 @@
 ## Latest
+- BUG FIX : evaluate class description must be over the class header
+- FEATURE : refPlaceholder in reference system  
 
 ## Release AKEP 2.0
 - Total rewrite AKEP 1.0

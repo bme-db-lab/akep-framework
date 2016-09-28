@@ -34,7 +34,7 @@
 		<xs:element name="task" type="taskType" maxOccurs="unbounded" minOccurs="0"/>
 	</xs:sequence>
 	<xs:attributeGroup ref="refernceAttrGroup"/>
-	<xs:anyAttribute/>
+	<xs:anyAttribute processContents="skip"/>
 </xs:complexType>
 
 <xs:complexType name="scriptType">
@@ -50,7 +50,7 @@
 	<xs:attribute name="inputTo" type="xs:string" />
 	<xs:attribute name="continueCondStream" type="continueCondStreamType" />
 	<xs:attributeGroup ref="refernceAttrGroup"/>
-	<xs:anyAttribute/>
+	<xs:anyAttribute processContents="skip"/>
 </xs:complexType>
 
 <xs:complexType name="keyType">
