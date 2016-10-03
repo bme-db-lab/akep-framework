@@ -25,7 +25,6 @@ def containOr(input, param, args):
 	return contain(input, param, True, args)
 
 def regexpToInput(input, param, args):
-	input,res = fromLog(input, args)
 	if input == '' and param == '':
 		return True
 	if param == '':
@@ -36,18 +35,11 @@ def regexpToInput(input, param, args):
 		input = input.replace(skipchar,'')
 	return re.search(param, input, re.DOTALL)
 
-def fromLog(input,args):
-	if 'fromLog' in getDictFromArgs(args):
-		logString = re.match('----log----(.*)----log----',input,flags=re.DOTALL).group(1) or ''
-		return logString.strip(),True
-	return re.sub('----log----.*----log----','',input,flags=re.DOTALL).strip(),False
-
 def ColumnsEqualParam(input,param, args):
-	input,res = fromLog(input, args)
 	rows = input.split('\n')
 	firstColumns = rows[0].replace('"','').split(',')
 	paramColumns = param.split(',')
-	find = 0;
+	find = 0
 	for paramColumn in paramColumns:
 		for col in firstColumns:
 			if regexpToInput(col,paramColumn,args):
@@ -57,25 +49,15 @@ def ColumnsEqualParam(input,param, args):
 	return find == len(paramColumns)
 
 def rowNumEq(input,param, args):
-	input,res = fromLog(input, args)
-	rowp = 1 if not res else 0
-	return len(input.split('\n')) - rowp == int(param)
+	return len(input.split('\n')) - 1 == int(param)
 
 def rowNumGrEq(input,param, args):
-	input,res = fromLog(input, args)
-	rowp = 1 if not res else 0
-	return len(input.split('\n')) - rowp >= int(param)
+	return len(input.split('\n')) - 1 >= int(param)
 
 def rowNumLtEq(input,param, args):
-	input,res = fromLog(input, args)
-	rowp = 1 if not res else 0
-	return len(input.split('\n')) - rowp <= int(param)
+	return len(input.split('\n')) - 1 <= int(param)
 
 def cellData(input,param, args):
-	input,res = fromLog(input, args)
-	if res:
-		args = re.sub('fromLog.*;?','',args)
-
 	rows = input.replace('"','').split('\n')
 	for cell in param.split('|||'):
 		cellPos = cell.split(':')[0].split(',')
