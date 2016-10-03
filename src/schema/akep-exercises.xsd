@@ -28,7 +28,7 @@
 
 <xs:complexType name="exerciseType">
 	<xs:sequence>
-		<xs:element name="script" type="scriptType" maxOccurs="unbounded"/>
+		<xs:element name="script" type="scriptType" maxOccurs="unbounded" minOccurs="0"/>
 		<xs:element name="exerciseKeys" type="exerciseKeysType" maxOccurs="1" minOccurs="0"/>
 		<xs:any minOccurs="0" namespace="##any" processContents="skip"/>
 		<xs:element name="task" type="taskType" maxOccurs="unbounded" minOccurs="0"/>
@@ -48,6 +48,8 @@
 	<xs:attribute name="entry" type="scriptEntryType"  default="main"/>
 	<xs:attribute name="inputType" type="inputTypeType"/>
 	<xs:attribute name="inputTo" type="xs:string" />
+	<xs:attribute name="noConAfterError" type="xs:string" />
+	<xs:attribute name="taskErrorHandle" type="xs:string" />	
 	<xs:attribute name="continueCondStream" type="continueCondStreamType" />
 	<xs:attributeGroup ref="refernceAttrGroup"/>
 	<xs:anyAttribute processContents="skip"/>
@@ -68,14 +70,17 @@
 	<xs:attribute name="score" type="xs:decimal"/>
 	<xs:attribute name="type" type="scoreType" />
 	<xs:attribute name="evaluateMode" type="evaluateModeType" />  
-  <xs:attribute name="negation" type="xs:boolean" />
-  <xs:attribute name="channelName" type="xs:string" />
+	<xs:attribute name="negation" type="xs:string" />
+	<xs:attribute name="channelName" type="xs:string" />
+	<xs:attribute name="opererator" type="operatorType" />
+	<xs:attribute name="errorCheck" type="xs:string" />
 	<xs:attributeGroup ref="refernceAttrGroup"/>
 	<xs:anyAttribute processContents="skip"/>
 </xs:complexType>
 
 <xs:complexType name="taskType">
 	<xs:sequence>
+		<xs:any minOccurs="0" namespace="##any" processContents="skip"/>
 		<xs:element name="tasktext" type="xs:string" maxOccurs="1" minOccurs="0"/>
 		<xs:element name="description" type="xs:string" maxOccurs="1" minOccurs="0"/>
 		<xs:element name="task" type="taskType" maxOccurs="unbounded" minOccurs="0"/>
@@ -124,6 +129,12 @@
 <xs:simpleType name="evaluateModeType">
 	<xs:restriction base="xs:string">
 		<xs:pattern value="containAnd|containOr|regexpToInput|fromLog|ColumnsEqualParam|rowNumEq|rowNumGrEq|rowNumLtEq|cellData"/>
+    </xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="operatorType">
+	<xs:restriction base="xs:string">
+		<xs:pattern value="and|or|xor"/>
     </xs:restriction>
 </xs:simpleType>
 
