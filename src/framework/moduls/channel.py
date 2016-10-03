@@ -5,9 +5,10 @@ from moduls.resultContent import resultContent as rs
 import collections
 import subprocess
 import select
+import re
 
 class channel:
-    def __init__(self,resultContent, logger, InputChStreamValidFn, chStringValidFn):
+    def __init__(self,resultContent, logger, InputChStreamValidFn, chStringValidFn, openFileWithCheckFn):
         self.channels = collections.defaultdict(list)
         self.resultContent = resultContent
         self.logger = logger
@@ -17,32 +18,32 @@ class channel:
         for script in self.resultContent.getScripts():
             if CH_INPUT_TYPE in script:
                 if script[CH_INPUT_TYPE] == SCRIPT_INPUT_TYPE[0]:
-                    script[CH_INPUTSTREAM] = self.xmlTaskInputToList(self.resultContent.getAll(tag=CH_INPUTSTREAM,attrName=SOLUTION_CH_NAME,attrValue=script[CHANNEL_NAME_ATTR]))
+                    script['taskInput'] = self.xmlTaskInputToList(self.resultContent.getAll(tag=CH_INPUTSTREAM,attrName=SOLUTION_CH_NAME,attrValue=script[CHANNEL_NAME_ATTR]))
                 elif script[CH_INPUT_TYPE] == SCRIPT_INPUT_TYPE[1]:
-                    if CH_PATH not in script:
+                    if CH_EXT_PATH not in script:
                         raise AKEPException(ERROR['SCRIPT']['MISSING_PATH']+script[CHANNEL_NAME_ATTR])
-                    data = openFileWithCheck(script[CH_PATH], self.logger, InputChStreamValidFn)
+                    data = openFileWithCheckFn(script[CH_EXT_PATH], InputChStreamValidFn)
                     if data is None:
-                        raise AKEPException(ERROR['GENERAL']['PERMISSON'] +'read file or '+ ERROR['FILE']['INVALID']+script[CH_PATH])
+                        raise AKEPException(ERROR['GENERAL']['PERMISSON'] +'read file or '+ ERROR['FILE']['INVALID']+script[CH_EXT_PATH])
                     data = self.resultContent.keyBinding(data)
-                    script[CH_INPUTSTREAM] = self.xmlTaskInputToList(self.resultContent.getAll(element=data, tag=TASKTAG))
+                    script['taskInput'] = self.xmlTaskInputToList(self.resultContent.getAll(element=data, tag=TASKTAG),False)
                 elif script[CH_INPUT_TYPE] == SCRIPT_INPUT_TYPE[2]:
                     if FROM_CAHNNEL not in script:
                         raise AKEPException(ERROR['SCRIPT']['NOT_VALID_VALUE'].format(FROM_CAHNNEL,script[CHANNEL_NAME_ATTR]))
                 else:
-                    raise AKEPException('Not valid value in "inputType" key from script: '+script[CHANNEL_NAME_ATTR])            
-            if CH_INPUT_TYPE not in script or script[CH_INPUT_TYPE] == SCRIPT_INPUT_TYPE[2]:
-                script[CH_INPUTSTREAM] = []
-                for inputNode in self.resultContent.getAll(tag=CH_INPUTSTREAM,element=script['node'],direct=True):
-                    script[CH_INPUTSTREAM].append(inputNode.text)
-                if len(script[CH_INPUTSTREAM]) == 0:
-                    del script[CH_INPUTSTREAM]
+                    raise AKEPException(ERROR['SCRIPT']['NOT_VALID_VALUE'].format('inputType',script[CHANNEL_NAME_ATTR]))
+            
+            script[CH_INPUTSTREAM] = []
+            for inputNode in self.resultContent.getAll(tag=CH_INPUTSTREAM,element=script['node'],direct=True):
+                script[CH_INPUTSTREAM].append(inputNode.text)
+            if len(script[CH_INPUTSTREAM]) == 0:
+                del script[CH_INPUTSTREAM]
             self.channels[script[ENTRY_ATTR]].append(script)
 
-    def xmlTaskInputToList(self,elements):
+    def xmlTaskInputToList(self,elements,inlineType=True):
         inputs = []
         for inputNode in elements:
-            taskID = rs.getAttrValue(rs.getParent(inputNode),TASK_ELEMENT_ID)
+            taskID = rs.getAttrValue(rs.getParent(inputNode) if inlineType else inputNode,TASK_ELEMENT_ID)
             children = rs.getChildren(inputNode)
             if len(children) == 0:
                 inputs.append({'taskID':taskID,'input':rs.getText(inputNode)})
@@ -57,32 +58,36 @@ class channel:
         order = CH_ENTRY_ORDER
         for entry in order:
             for ch in self.channels[entry]:
-                if entry == CH_ENTRY_ORDER[2] and NO_CONTINUE_AFTER_ERROR not in ch:
-                    inputstream = SEPARATOR_COMMUNICATE_TASK_END.join(inputItem['input'] for inputItem in ch[CH_INPUTSTREAM])
-                else:                            
-                    inputstream = '\n'.join(ch[CH_INPUTSTREAM]) if CH_INPUTSTREAM in ch else None                
+                if 'taskInput' in ch:
+                    taskInput = SEPARATOR_COMMUNICATE_TASK_END.join(inputItem['input'] for inputItem in ch['taskInput'])
+                inputstream = '\n'.join(ch[CH_INPUTSTREAM]) if CH_INPUTSTREAM in ch else ''                
                 
                 if CH_INPUT_TYPE in ch and ch[CH_INPUT_TYPE] == SCRIPT_INPUT_TYPE[2]:
                     refChOut = self.getChannel(ch[FROM_CAHNNEL])
                     if refChOut == None or 'out' not in refChOut or refChOut['out'] == '':
                         raise AKEPException(ERROR['NOT_FIND']['CH_OR_CHOUT'].format(ch[FROM_CAHNNEL],ch[CHANNEL_NAME_ATTR]))
-                    
+                    output = str(refChOut['out'])
                     if CH_INPUTTO in ch:
-                        ch['arguments'] = ch['arguments'].replace(ch[CH_INPUTTO],refChOut['out'])
+                        ch['arguments'] = ch['arguments'].replace(ch[CH_INPUTTO],output)
+                        if inputstream != '':
+                            inputstream = inputstream.replace(ch[CH_INPUTTO],output)
                     else:
-                        inputstream = (inputstream+'\n'+refChOut['out']) if inputstream is not None else refChOut['out']
+                        inputstream = (inputstream+'\n'+output) if inputstream != '' else output
+                
+                concatInnerInputToTaskInp = '' if inputstream == '' else inputstream + SEPARATOR_COMMUNICATE_TASK_END
                         
                 arguments = (ch[CH_PATH]+' '+ch['arguments']).split()
                 ch['out'] = None
+                ch['error'] = None
                 again = True
                 while again:
                     again = False
                     try:
                         self.logger.info('Channel {} start'.format(ch[CHANNEL_NAME_ATTR]))
-                        self.logger.debug('Channel arguments: {} inputstream: {}'.format(ch['arguments'],inputstream))
+                        self.logger.debug('Channel arguments: {} inputstream: {}'.format(ch['arguments'],inputstream if 'taskInput' not in ch else (concatInnerInputToTaskInp + taskInput)))
                         if entry == CH_ENTRY_ORDER[1]:
                             proc = subprocess.Popen(arguments, stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True)
-                            if inputstream is not None:                            
+                            if inputstream != '':                            
                                 proc.stdin.write(inputstream)
                                 proc.stdin.close()
                             poll_obj = select.poll()
@@ -103,11 +108,15 @@ class channel:
                         else:
                             proc = subprocess.Popen(arguments,stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True)
                             self.openList.append({'proc':proc,'chName':ch[CHANNEL_NAME_ATTR]})
-                            out, error = proc.communicate(input=inputstream,timeout=60)
+                            out, error = proc.communicate(input=(inputstream if 'taskInput' not in ch else (concatInnerInputToTaskInp + taskInput)),timeout=60)
                             self.logger.info('Channel {} stop'.format(ch[CHANNEL_NAME_ATTR]))
-                            if error != '':
-                                raise subprocess.SubprocessError(error)                            
-                            ch['out'],lastRightIndex = self.createChannelOutputToTaskXML(ch[CH_INPUTSTREAM],out,ch['out']) if entry == CH_ENTRY_ORDER[2] else (out,None)
+                            if proc.poll() != 0:
+                                raise subprocess.SubprocessError(error)
+                            if CH_OUT_TASK_TYPE in ch:
+                                ch['out'] = self.chStringValidFn(re.sub('set feedback (on|off)','',re.sub('--.*\n','',out[out.find('<tasks>'):out.find('</tasks>')+8].replace('prompt','')),flags=re.DOTALL))
+                            else:                           
+                                ch['out'],lastRightIndex = self.createChannelOutputToTaskXML(ch['taskInput'],out,ch['out'],concatInnerInputToTaskInp) if 'taskInput' in ch else (out,None)
+                                ch['error'],nothing = self.createChannelOutputToTaskXML(ch['taskInput'],error,ch['error'],concatInnerInputToTaskInp) if 'taskErrorHandle' in ch else (error,None)
                             self.logger.debug('channel: {} out: {}'.format(ch[CHANNEL_NAME_ATTR], rs.toStringFromElement(ch['out']).decode('utf-8') if rs.isElementType(ch['out']) else ch['out']))                            
                     except FileNotFoundError:
                         self.terminateChannelScripts()
@@ -118,12 +127,16 @@ class channel:
                     except PermissionError:
                         raise AKEPException(ERROR['GENERAL']['PERMISSON'] + 'script: '+ch[CHANNEL_NAME_ATTR])
                     except (subprocess.SubprocessError, subprocess.CalledProcessError) as err:
-                        if entry == CH_ENTRY_ORDER[2] and NO_CONTINUE_AFTER_ERROR not in ch:                        
+                        if 'taskInput' in ch:                        
                             self.logger.exception('Error in script: '+ch[CHANNEL_NAME_ATTR])
-                            ch['out'], lastRightIndex = self.createChannelOutputToTaskXML(ch[CH_INPUTSTREAM],out,ch['out'])
-                            ch['out'].append(rs.createElement(TASKTAG,{TO_ELEMENT_ERROR_ATTR:str(err),TASK_ELEMENT_ID:ch[CH_INPUTSTREAM][lastRightIndex+1]['taskID']}))
-                            if lastRightIndex+1 < len(ch[CH_INPUTSTREAM])-1:
-                                inputstream = SEPARATOR_COMMUNICATE_TASK_END.join([ch[CH_INPUTSTREAM][index]['input'] for index in range(lastRightIndex+2,len(ch[CH_INPUTSTREAM]))])
+                            ch['out'], lastRightIndex = self.createChannelOutputToTaskXML(ch['taskInput'],out,ch['out'],concatInnerInputToTaskInp)
+                            ch['out'].append(rs.createElement(TASKTAG,{TO_ELEMENT_ERROR_ATTR:str(err),TASK_ELEMENT_ID:ch['taskInput'][lastRightIndex+1]['taskID']}))
+                            if 'taskErrorHandle' in ch:
+                                ch['error'] = self.createChannelOutputToTaskXML(ch['taskInput'],str(err),ch['error'],concatInnerInputToTaskInp)
+                                errorTag,nothing = rs.createElement(TASKTAG,{TASK_ELEMENT_ID:ch['taskInput'][lastRightIndex+1]['taskID']})
+                                ch['error'].append(errorTag)
+                            if lastRightIndex+1 < len(ch['taskInput'])-1 and NO_CONTINUE_AFTER_ERROR not in ch and 'CRITICAL' not in str(err):
+                                taskInput = SEPARATOR_COMMUNICATE_TASK_END.join([ch['taskInput'][index]['input'] for index in range(lastRightIndex+2,len(ch['taskInput']))])
                                 again = True
                         else:
                             raise AKEPException('Error in script: '+ ch[CHANNEL_NAME_ATTR])
@@ -136,20 +149,29 @@ class channel:
                     return ch
         raise AKEPException('Not find channel {}'.format(name))
 
-    def getChannelTaskOutput(self,channelName,taskID):
+    def getChannelTaskOutput(self,channelName,taskID,shouldError):
         ch = self.getChannel(channelName)
         if rs.isElementType(ch['out']):
-            task = self.resultContent.get(element=ch['out'], tag=TASKTAG, attrName='n', attrValue=taskID)
+            if 'taskErrorHandle' in ch and shouldError:
+                errorToTask = self.resultContent.get(element=ch['error'], tag=TASKTAG, attrName='n', attrValue=taskID)
+                if errorToTask is not None:
+                    return (rs.getText(errorToTask),shouldError)
+
+            task = self.resultContent.get(element=ch['out'], tag=TASKTAG, attrName='n', attrValue=taskID)            
+            if task is None:
+                return (None, shouldError)
             if rs.getAttrValue(task,TO_ELEMENT_ERROR_ATTR) is not None:
-                return rs.getAttrValue(task,TO_ELEMENT_ERROR_ATTR),False
-            return rs.getText(task),True
-        return ch['out'],True
+                return rs.getAttrValue(task,TO_ELEMENT_ERROR_ATTR),shouldError
+            return (rs.getText(task),not shouldError)
+        return (ch['out'],True)
                     
-    def createChannelOutputToTaskXML(self,taskInputStream,xmlTextList,prevXML=None):
-        if xmlTextList == '':
-            return (prevXML,len(prevXML)-1) if prevXML is not None else (rs.createElement('tasks'),-1)
+    def createChannelOutputToTaskXML(self,taskInputStream,xmlTextList,prevXML,concatInnerInputToTaskInp):
         tasks = xmlTextList.strip().strip(SEPARATOR_COMMUNICATE_TASK_END).split(SEPARATOR_COMMUNICATE_TASK_END)
-        prevInd = len(rs.getChildren(prevXML)) if prevXML is not None else 0
+        if concatInnerInputToTaskInp != '' and len(tasks) > 0:
+            del tasks[0]
+        if len(tasks) == 0 or tasks[0] == '':
+            return (prevXML,len(prevXML)-1) if prevXML is not None else (rs.createElement('tasks'),-1)
+        prevInd = len(prevXML) if prevXML is not None else 0        
         xmlText = '<tasks>'+''.join(['<task n="'+taskInputStream[prevInd+index]['taskID']+'"><![CDATA['+tasks[index]+']]></task>' for index in range(0,len(tasks))])+'</tasks>'
         tasksXML = self.chStringValidFn(xmlText)
         if prevXML is None:
@@ -169,6 +191,6 @@ class channel:
                     else:
                         item['proc'].terminate()                
                         self.logger.info('Channel {} terminated'.format(item['chName']))
-                if self.getChannel(item['chName'])[ENTRY_ATTR] == CH_ENTRY_ORDER[1]:
-                    out, err = item['proc'].stdout.read(),item['proc'].stderr.read()
-                    self.logger.debug('Channel: {} out: {} err: {}'.format(item['chName'],out,err))
+                    if item['proc'].poll() is not None:
+                        out, err = item['proc'].stdout.read(),item['proc'].stderr.read()
+                        self.logger.debug('Channel: {} out: {} err: {}'.format(item['chName'],out,err))

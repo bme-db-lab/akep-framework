@@ -4,7 +4,8 @@ ERROR = {
     'NOT_FIND' : {
         'EXERCISE_TO_ID': 'Not find exercise definition to ',
         'KEY_IN_HIERAR': 'Not find key in key hierarchy: ',
-        'CH_OR_CHOUT': 'Not find {} channel or it is not have out yet, channelName: {}'
+        'CH_OR_CHOUT': 'Not find {} channel or it is not have out yet, channelName: {}',
+        'USER_GROUP':'No find user group {}'
     },
     'UNEXPECTED':{
         'SOCKET_CLOSE': 'Socket unexpectedly closed, details: ',

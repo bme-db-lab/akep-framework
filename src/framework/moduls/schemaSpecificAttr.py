@@ -13,20 +13,26 @@ CH_INPUTSTREAM = 'inputstream'
 CH_INPUT_TYPE = 'inputType'
 CH_INPUTTO = 'inputTo'
 CH_PATH = 'path'
+CH_EXT_PATH = 'inputPath'
 CH_CHAIN_CONT_COND = 'continueCondStream'
 CH_ENTRY_ORDER = ['pre','con','main','post']
 CH_OUT_TOTASK = 'output'
+CH_OUT_TASK_TYPE = 'taskOutput'
 FROM_CAHNNEL = 'fromChannel'
 SCRIPT_INPUT_TYPE = ['inline','external','channelOutput']
+CHANNEL_NAME_ATTR = 'name'
 # to evaluate system
 SCORE_TYPE = ['bonus','minus']
 SOLUTION_CH_NAME = 'channelName'
 EVULATION_MODE_ATTR = 'evaluateMode'
 SOL_SCORE_TYPE = 'scoreType'
 SCORE_ATTR = 'score'
+SOL_OPERATOR = 'operator'
+SOL_NEGATION = 'negation'
+SOL_SHOULD_ERROR = 'errorCheck'
+SOL_OTHER_OPTION = 'evaluateArgs'
 # general
 EXERCISE = 'exercise'
-CHANNEL_NAME_ATTR = 'name'
 TASKTAG = 'task'
 ENTRY_ATTR = 'entry'
 TASK_ELEMENT_ID = 'n'

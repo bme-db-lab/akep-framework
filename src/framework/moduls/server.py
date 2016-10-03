@@ -6,11 +6,6 @@ import threading
 class ThreadPoolMixin:
     """
     Mixin to use a fixed pool of threads to handle requests.
-    .. note::
-       When shutting down the server, please ensure you call this mixin's
-       `join()` to shut down the pool along with the server's `shutdown()`
-       method. The order in which these are performed is not significant,
-       but both actions must be performed.
     """
 
     # Size of pool.

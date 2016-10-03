@@ -52,11 +52,9 @@ class resultContent:
             elementParent.remove(element)
 
         for ind,child in enumerate(remoteElement if referenceChildrenFind is None else self.getAll(findText = referenceChildrenFind, element = remoteElement)):
-            print(elementParent)
             if elementParent is None:
                 element.append(copy.deepcopy(child))
             else:
-                print(child)
                 elementParent.insert(elementStartInd+ind,copy.deepcopy(child))
         
     def keyBinding(self, element = None):
@@ -72,8 +70,6 @@ class resultContent:
                 value = self.user[key]
             else:
                 value = self.keyFn(key,self.command,self.resultXMLRoot)
-            if value[0] == '@':
-                value = str(eval(value[1:]))
             self.logger.debug('value: '+value)
             elementText = elementText.replace('$'+key+'$',value)
 
@@ -107,7 +103,7 @@ class resultContent:
         return None if len(result) == 0 else result[0]
 
     def giveBackUser(self):
-        if not hasattr(self,'user'):
+        if hasattr(self,'user'):
             self.giveBackUserFn(self.usergroup, self.user)
 
     def setAttr(tag,attrName,value):
