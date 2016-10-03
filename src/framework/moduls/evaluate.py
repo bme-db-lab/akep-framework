@@ -83,19 +83,19 @@ class evaluate:
         if rs.getAttrValue(element,EVULATION_MODE_ATTR) is not None:
             requiredSolution = re.sub('\s+',' ',element.text).strip().lower()
             # get a tuple: channel output or error text, output is failed to the actual task?
-            taskOutput =  self.channels.getChannelTaskOutput(rs.getAttrValue(element,SOLUTION_CH_NAME),rs.getAttrValue(task,TASK_ELEMENT_ID))
+            taskOutput =  self.channels.getChannelTaskOutput(rs.getAttrValue(element,SOLUTION_CH_NAME),rs.getAttrValue(task,TASK_ELEMENT_ID),True if rs.getAttrValue(element,SOL_SHOULD_ERROR) is not None else False)
             # if parent task does not contain the output from channel which is referenced by actual solution
             if self.resultContent.get(element = task,tag = CH_OUT_TOTASK,attrName=SOLUTION_CH_NAME,attrValue=element.get(SOLUTION_CH_NAME),direct=True) is None:
                 taskOutputElement = rs.createElement(CH_OUT_TOTASK, {SOLUTION_CH_NAME:rs.getAttrValue(element,SOLUTION_CH_NAME)})
-                rs.setText(taskOutputElement, taskOutput[0] if taskOutput[1] else 'Error: '+ taskOutput[0])
+                rs.setText(taskOutputElement, taskOutput[0] if taskOutput[1] else 'Error: '+ str(taskOutput[0]))
                 rs.appendTo(taskOutputElement,task)
             score = 0 if rs.getAttrValue(element,SCORE_ATTR) is None else float(rs.getAttrValue(element,SCORE_ATTR))
             try:
-                # if channel output not failed to actual task
+                # if channel output not failed to actual task or we would like to evaluate the error
                 if taskOutput[1]:
-                    result = getattr(evaluateFunctions, rs.getAttrValue(element,EVULATION_MODE_ATTR))(taskOutput[0].lower(),requiredSolution,rs.getAttrValue(element,'evaluateArgs'))
+                    result = getattr(evaluateFunctions, rs.getAttrValue(element,EVULATION_MODE_ATTR))(str(taskOutput[0]).strip().lower(),requiredSolution,rs.getAttrValue(element,SOL_SHOULD_ERROR))
                     # negate the result if solution has Negation attr
-                    result = not result if rs.getAttrValue(element,'Negation') is not None else result
+                    result = not result if rs.getAttrValue(element,SOL_NEGATION) is not None else result
                     return (result,(score if result else 0),score)         
             except:
                 self.logger.exception('Evaluate error in channel {} with {} taskID'.format(rs.getAttrValue(element,SOLUTION_CH_NAME),rs.getAttrValue(task,TASK_ELEMENT_ID)))
@@ -113,24 +113,23 @@ class evaluate:
         maxScore = 0
         # if operator is and AKEP give subscore and sum the solutions scores in the container
         # else max score will return calculated
-        scoreFunc = sum if rs.getAttrValue(element,'operator') == 'and' else max
+        scoreFunc = sum if rs.getAttrValue(element,SOL_OPERATOR) == 'and' else max
         for childSolution in self.resultContent.getAll(element=element, tag=SOLUTION_TAG, direct=True):
             # if element has children solition elements
             if scoreType is None or element.tag == TASKTAG and rs.getAttrValue(childSolution,SOL_SCORE_TYPE) == scoreType:
                 result,scoreItem,maxScoreItem = self.solutionEvaluateAndPut(childSolution,task)
-                score = scoreFunc([score,scoreItem if result else 0])
+                score = scoreFunc([score,scoreItem]) #if result else 0
                 maxScore = max(maxScore,maxScoreItem)
                 rs.setAttr(childSolution,'result','true' if result else 'false')
                 rs.setAttr(childSolution,'resultScore',self.formatScore(scoreItem))
                 results.append(result)
         # default solution has or relationship with neighbour solutions
         # final result is calculated with multiOperations
-        finalResult = self.multiOperations('or' if rs.getAttrValue(element,'operator') is None else rs.getAttrValue(element,'operator'), copy.copy(results))
-        if element.tag == TASKTAG:
-            finalResult = not finalResult if rs.getAttrValue(childSolution,'Negation') is not None else finalResult
+        finalResult = self.multiOperations('or' if rs.getAttrValue(element,SOL_OPERATOR) is None else rs.getAttrValue(element,SOL_OPERATOR), copy.copy(results))
+        finalResult = not finalResult if rs.getAttrValue(element,SOL_NEGATION) is not None else finalResult
 
         # if container tag has score and finalResult True it will be result else the children function score return  
-        return (finalResult, (float(rs.getAttrValue(element,SCORE_ATTR)) if finalResult and rs.getAttrValue(element,SCORE_ATTR) is not None else score),maxScore)
+        return (finalResult, (float(rs.getAttrValue(element,SCORE_ATTR)) if finalResult and rs.getAttrValue(element,SCORE_ATTR) is not None else score),float(rs.getAttrValue(element,SCORE_ATTR)) if rs.getAttrValue(element,SCORE_ATTR) else maxScore)
         
     def multiOperations(self,opType,operands):
         '''Recursive function to process the sentence'''

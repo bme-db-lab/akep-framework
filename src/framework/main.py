@@ -24,30 +24,30 @@ class AKEPProcess():
     def run(self):
         self.exerciseID = store.getValueFromKH(EXERCISE_ID,self.command)
         self.ownerID = store.getValueFromKH(OWNER_ID,self.command)
-        resultContent = store.createResultContent(self.exerciseID,self.ownerID, self.logger, self.runningID, self.command)
+        self.resultContent = store.createResultContent(self.exerciseID,self.ownerID, self.logger, self.runningID, self.command)
         self.logger.info('Start [OK]')
 
-        resultContent.referenceFormating()
+        self.resultContent.referenceFormating()
         self.logger.info('References [OK]')
 
-        resultContent.keyBinding()
+        self.resultContent.keyBinding()
         self.logger.info('Key binding [OK]')
 
-        channels = channel(resultContent, self.logger, store.checkTaskChannelInputStreamValid,store.checkTaskChannelStringValid)
+        channels = channel(self.resultContent, self.logger, store.checkTaskChannelInputStreamValid,store.checkTaskChannelStringValid, store.openFileWithCheck)
         self.logger.info('Channels initialize [OK]')
 
-        resultContent.deleteNotOutTags()
+        self.resultContent.deleteNotOutTags()
         self.logger.info('Delete unused tags from output [OK]')
 
-        channels.run()
         self.openListKillFn = channels.terminateChannelScripts
+        channels.run()
         self.logger.info('Channels run [OK]')
 
-        evaluateModul = evaluate(channels,resultContent, self.logger)
+        evaluateModul = evaluate(channels,self.resultContent, self.logger)
         evaluateModul.run()
         self.logger.info('Evaluate all [OK]')
 
-        return resultContent.toString()
+        return self.resultContent.toString()
     
 
 class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
@@ -72,8 +72,8 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
             except:
                 pass
             logger.exception(ERROR['UNEXPECTED']['SOCKET_CLOSE'])
-        if hasattr(akepProcess,'user'):
-            giveBackUser(akepProcess.usergroup,akepProcess.user)
+        if hasattr(akepProcess,'resultContent'):
+            akepProcess.resultContent.giveBackUser()
         if hasattr(akepProcess,'openListKillFn'):
             akepProcess.openListKillFn(True)
         logger.info('Connetion closed')

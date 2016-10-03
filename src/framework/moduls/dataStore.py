@@ -6,14 +6,20 @@ from lxml import etree
 import json
 from glob import iglob
 import collections
+import threading
+
+# moduls to use eval
+import time
 
 class dataStore:
+    lock = threading.Lock()
+
     def __init__(self, localConfigFile, schemaFile, logger, channelScemaFile = None):
         self.logger = logger
-        self.globalConf = self.__openFileWithCheck(os.path.dirname(os.path.realpath(__file__))+"/../"+GLOBAL_CONF_FILE,json.load)
-        self.localConf = self.__openFileWithCheck(localConfigFile,json.load)
-        self.schema = self.__openFileWithCheck(schemaFile,etree.parse)
-        chSchema = None if channelScemaFile is None else self.__openFileWithCheck(channelScemaFile,etree.parse)
+        self.globalConf = self.openFileWithCheck(os.path.dirname(os.path.realpath(__file__))+"/../"+GLOBAL_CONF_FILE,json.load)
+        self.localConf = self.openFileWithCheck(localConfigFile,json.load)
+        self.schema = self.openFileWithCheck(schemaFile,etree.parse)
+        chSchema = None if channelScemaFile is None else self.openFileWithCheck(channelScemaFile,etree.parse)
         if not self.isReady:
             logger.critical(ERROR['GENERAL']['MISSING_TO_START'])
             return
@@ -35,9 +41,10 @@ class dataStore:
         return resultContent(exerciseID,ownerID,self.exerciseRoots,self.getValueFromKH,self.getUserFromUserGroups,self.giveBackUser,logger,runningID,command)    
 
     def getValueFromKH(self,key, commandDict=None,exerciseRoot=None):
+        result = None
         if commandDict is not None and key in commandDict:
-            return commandDict[key]
-        if exerciseRoot is not None:
+            result = commandDict[key]
+        elif exerciseRoot is not None:
             exerciseDict = collections.defaultdict(list)
             exerciseKeysNode = exerciseRoot.find('.//'+EXERCISE_VARIABLES)
             if exerciseKeysNode is not None:
@@ -45,12 +52,23 @@ class dataStore:
                     if exerciseKey.get('key') is not None:
                         exerciseDict[exerciseKey.get('key')].append(exerciseKey.text)
             if key in exerciseDict:
-                return exerciseDict[key][0] if len(exerciseDict[key]) == 1 else exerciseDict[key]
-        if self.localConf is not None and key in self.localConf:
-            return self.localConf[key]
-        if key in self.globalConf:
-            return self.globalConf[key]
-        raise AKEPException(ERROR['NOT_FIND']['KEY_IN_HIERAR']+key)
+                result = exerciseDict[key][0] if len(exerciseDict[key]) == 1 else exerciseDict[key]
+        
+        if result is None:
+            if self.localConf is not None and key in self.localConf:
+                result = self.localConf[key]
+            elif key in self.globalConf:
+                result = self.globalConf[key]  
+            else:
+                raise AKEPException(ERROR['NOT_FIND']['KEY_IN_HIERAR']+key)
+        
+        # if the value start with @ character, put to eval function
+        if isinstance(result,str) and result != '' and result[0]=='@':
+            result = str(eval(result[1:]))
+        if commandDict is not None:
+            commandDict[key] = result
+        
+        return result
 
     def checkExerciseValid(self,source):
         try:
@@ -74,14 +92,14 @@ class dataStore:
         if self.exerciseRoots is None:
             self.exerciseRoots = {}
         for path in iglob(self.exercisesPath + '/' + EXERCISE_FILE_FORMAT):
-            elementTreeObject = self.__openFileWithCheck(path,self.checkExerciseValid)
+            elementTreeObject = self.openFileWithCheck(path,self.checkExerciseValid)
             if elementTreeObject is not None:
                 key = path.rsplit('.', 2)[1]
                 self.exerciseRoots[key] = elementTreeObject.getroot()
                 self.logger.info('Exercise loaded: '+key)
 
 
-    def __openFileWithCheck(self,path,loader=None):
+    def openFileWithCheck(self,path,loader=None):
         if os.path.isfile(path):        
             try:
                 data = open(path)
@@ -98,14 +116,17 @@ class dataStore:
 
     def getUserFromUserGroups(self,group):
         if group in self.userGroups:
-            if len(self.userGroups[group]) != 0:
+            self.lock.acquire()
+            if len(self.userGroups[group]) != 0:                
                 userObject = self.userGroups[group][0]
                 self.userGroups[group].remove(userObject)
+                self.lock.release()
                 return userObject
             else:
+                self.lock.release()
                 raise AKEPException('No available user in group: '+group)
         else:
-            raise AKEPException('No find user group: '+group)
+            raise AKEPException(ERROR['NOT_FIND']['USER_GROUP'].format(group))
         
 
     def giveBackUser(self,group,userObject):
