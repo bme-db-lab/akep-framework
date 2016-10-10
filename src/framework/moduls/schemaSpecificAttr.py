@@ -54,6 +54,11 @@ GLOBAL_CONF_FILE = 'akep.cfg'
 BINDING_REGEX = '\$([a-zA-Z0-9-\_\@]+)\$'
 CH_CON_TYPE_ANSWER_TIMEOUT = 10000
 SEPARATOR_COMMUNICATE_TASK_END = '[TEND]'
+ANALYSE_EVAL_PROP = ['taskID','evaluateID','evaluationFunc','score','errorType']
+ANALYSE_CH_PROP = ['name','start','stop','errorType']
+ANALYSE_TASK_PROP = ['taskID','score','maxScore']
+ANALYSE_ASSESMENT_RUN = ['exID','ownerID','FolderID','start','stop','lastState','errorType']
+
 
 ####################################################################
 # Built in keys, You have to define this keys value in key history #

@@ -6,6 +6,7 @@ import collections
 import subprocess
 import select
 import re
+import time
 
 class channel:
     def __init__(self,resultContent, logger, InputChStreamValidFn, chStringValidFn, openFileWithCheckFn):
@@ -82,6 +83,8 @@ class channel:
                 again = True
                 while again:
                     again = False
+                    ch['errorType'] = ''
+                    ch['start'] = str(time.time())
                     try:
                         self.logger.info('Channel {} start'.format(ch[CHANNEL_NAME_ATTR]))
                         self.logger.debug('Channel arguments: {} inputstream: {}'.format(ch['arguments'],inputstream if 'taskInput' not in ch else (concatInnerInputToTaskInp + taskInput)))
@@ -119,15 +122,21 @@ class channel:
                                 ch['error'],nothing = self.createChannelOutputToTaskXML(ch['taskInput'],error,ch['error'],concatInnerInputToTaskInp) if 'taskErrorHandle' in ch else (error,None)
                             self.logger.debug('channel: {} out: {}'.format(ch[CHANNEL_NAME_ATTR], rs.toStringFromElement(ch['out']).decode('utf-8') if rs.isElementType(ch['out']) else ch['out']))                            
                     except FileNotFoundError:
+                        ch['stop'] = str(time.time())
+                        ch['errorType'] = 'Script not found'
                         self.terminateChannelScripts()
                         raise AKEPException(ERROR['FILE']['NOT_FIND']+ch[CHANNEL_NAME_ATTR])
                     except subprocess.TimeoutExpired:
+                        ch['errorType'] = 'Channel time out'
+                        ch['stop'] = str(time.time())
                         proc.kill()
                         raise AKEPException(ERROR['SCRIPT']['TIME_EXPIRED']+ ch[CHANNEL_NAME_ATTR])
                     except PermissionError:
+                        ch['stop'] = str(time.time())
                         raise AKEPException(ERROR['GENERAL']['PERMISSON'] + 'script: '+ch[CHANNEL_NAME_ATTR])
                     except (subprocess.SubprocessError, subprocess.CalledProcessError) as err:
-                        if 'taskInput' in ch:                        
+                        if 'taskInput' in ch:
+                            ch['errorType'] = '[ReRUN] Call- or subprocess error'                        
                             self.logger.exception('Error in script: '+ch[CHANNEL_NAME_ATTR])
                             ch['out'], lastRightIndex = self.createChannelOutputToTaskXML(ch['taskInput'],out,ch['out'],concatInnerInputToTaskInp)
                             ch['out'].append(rs.createElement(TASKTAG,{TO_ELEMENT_ERROR_ATTR:str(err),TASK_ELEMENT_ID:ch['taskInput'][lastRightIndex+1]['taskID']}))
@@ -139,7 +148,10 @@ class channel:
                                 taskInput = SEPARATOR_COMMUNICATE_TASK_END.join([ch['taskInput'][index]['input'] for index in range(lastRightIndex+2,len(ch['taskInput']))])
                                 again = True
                         else:
+                            ch['errorType'] = 'Call- or subprocess error'
+                            ch['stop'] = str(time.time())
                             raise AKEPException('Error in script: '+ ch[CHANNEL_NAME_ATTR])
+                    ch['stop'] = str(time.time())
         self.terminateChannelScripts()
 
     def getChannel(self,name):
