@@ -9,7 +9,7 @@ class ThreadPoolMixin:
     """
 
     # Size of pool.
-    pool_size = 2
+    pool_size = 10
 
     # How long to wait on an empty queue, in seconds. Can be a float.
     timeout_on_get = 0.5

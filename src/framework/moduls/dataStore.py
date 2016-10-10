@@ -64,7 +64,11 @@ class dataStore:
         
         # if the value start with @ character, put to eval function
         if isinstance(result,str) and result != '' and result[0]=='@':
-            result = str(eval(result[1:]))
+            try:
+                result = str(eval(result[1:]))
+            except:
+                logger.warning('Not valid eval value')
+                pass
         if commandDict is not None:
             commandDict[key] = result
         

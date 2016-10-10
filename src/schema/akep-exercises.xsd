@@ -5,7 +5,7 @@
 <xs:element name="exercise" type="exerciseType">
 	<xs:unique name="uniqueScriptChannelName">
 		<xs:selector xpath="script" /> 
-		<xs:field xpath="@channelName" /> 
+		<xs:field xpath="@name" /> 
 	</xs:unique>
 	<xs:unique name="uniqueTaskIdentifier">
 		<xs:selector xpath=".//task" /> 
