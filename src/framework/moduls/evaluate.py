@@ -25,13 +25,13 @@ evaluateMode required value, which reference the function name from evaluateFunc
 '''
 class evaluate:
 
-    def __init__(self,channels,resultContent, logger):
+    def __init__(self,channelsGetTastkOutputFn,resultContent, logger):
         '''Constructor
         channels = channel class instance
         resultContent = resultContent class instance
         logger = loggger instance'''
 
-        self.channels = channels
+        self.getTaskOutputFn = channelsGetTastkOutputFn
         self.resultContent = resultContent
         self.logger = logger
         self.toAnalyse = []
@@ -40,22 +40,22 @@ class evaluate:
         '''
         Start the evulation process, results will be store in the specific solution elements
         in resultContent'''
-
-        score,maxScore = self.evaluateAll(self.resultContent.resultXMLRoot)
+        score,maxScore = self.__evaluateAll(self.resultContent.resultXMLRoot)
         # result score and max score put the root element
-        self.resultContent.resultXMLRoot.set('resultScore',self.formatScore(score))
-        self.resultContent.resultXMLRoot.set('maxScore',self.formatScore(maxScore))  
+        self.resultContent.resultXMLRoot.set('resultScore',self.__formatScore(score))
+        self.resultContent.resultXMLRoot.set('maxScore',self.__formatScore(maxScore))
+        self.scoreToAnalyse = self.__formatScore(score/maxScore*100)
 
-    def evaluateAll(self,taskElement):
+    def __evaluateAll(self,taskElement):
         '''
         Recursive function to start evaluate recursive function from all task element
         and sum scores'''
         # if task has solution element
         if self.resultContent.get(element = taskElement, tag = SOLUTION_TAG, direct=True) is not None:
             # three score tree
-            normalResult = self.solutionEvaluateAndPut(taskElement,taskElement)
-            bonusResult = self.solutionEvaluateAndPut(taskElement,taskElement,SCORE_TYPE[0])
-            minusResult = self.solutionEvaluateAndPut(taskElement,taskElement,SCORE_TYPE[1])
+            normalResult = self.__solutionEvaluateAndPut(taskElement,taskElement)
+            bonusResult = self.__solutionEvaluateAndPut(taskElement,taskElement,SCORE_TYPE[0])
+            minusResult = self.__solutionEvaluateAndPut(taskElement,taskElement,SCORE_TYPE[1])
             # ... and the result is
             # formal: score, max score (without minus or plus)
             score = normalResult[1] + bonusResult[1] - minusResult[1],normalResult[2]
@@ -66,19 +66,19 @@ class evaluate:
         maxScore = 0
         # if task has task element
         for task in self.resultContent.getAll(element = taskElement, tag = TASKTAG, direct = True):
-            scoreItem,maxScoreItem = self.evaluateAll(task)
+            scoreItem,maxScoreItem = self.__evaluateAll(task)
             score += scoreItem
             maxScore += maxScoreItem
-            rs.setAttr(task,'resultScore',self.formatScore(scoreItem))
-            rs.setAttr(task,'maxScore',self.formatScore(maxScoreItem))
+            rs.setAttr(task,'resultScore',self.__formatScore(scoreItem))
+            rs.setAttr(task,'maxScore',self.__formatScore(maxScoreItem))
                     
         return score,maxScore
 
-    def formatScore(self,score,formatText='{0:.2f}'):
+    def __formatScore(self,score,formatText='{0:.2f}'):
         '''Format score style to two decimal point'''
         return formatText.format(round(score,2))
                 
-    def solutionEvaluateAndPut(self,element,task,scoreType=None,parentOperator=None):
+    def __solutionEvaluateAndPut(self,element,task,scoreType=None,parentOperator=None):
         '''Evaluate all soluiton tag with evaluateMode attribute'''
         '''If you would like to write next sentence:
            S1 and (S2 or S3) you have to create a solution container to every bracket with operator attribute and the [and,xor,default=or] value which represent the children solution relationship'''
@@ -89,7 +89,7 @@ class evaluate:
             solID = ((parentOperator+'.') if parentOperator is not None else '')+str(element.getparent().index(element))
             requiredSolution = re.sub('\s+',' ',element.text).strip().lower()
             # get a tuple: channel output or error text, output is failed to the actual task?
-            taskOutput =  self.channels.getChannelTaskOutput(rs.getAttrValue(element,SOLUTION_CH_NAME),rs.getAttrValue(task,TASK_ELEMENT_ID),True if rs.getAttrValue(element,SOL_SHOULD_ERROR) is not None else False)
+            taskOutput =  self.getTaskOutputFn(rs.getAttrValue(element,SOLUTION_CH_NAME),rs.getAttrValue(task,TASK_ELEMENT_ID),True if rs.getAttrValue(element,SOL_SHOULD_ERROR) is not None else False)
             # if parent task does not contain the output from channel which is referenced by actual solution
             if self.resultContent.get(element = task,tag = CH_OUT_TOTASK,attrName=SOLUTION_CH_NAME,attrValue=element.get(SOLUTION_CH_NAME),direct=True) is None:
                 taskOutputElement = rs.createElement(CH_OUT_TOTASK, {SOLUTION_CH_NAME:rs.getAttrValue(element,SOLUTION_CH_NAME)})
@@ -127,21 +127,21 @@ class evaluate:
         for childSolution in self.resultContent.getAll(element=element, tag=SOLUTION_TAG, direct=True):
             # if element has children solition elements
             if scoreType is None or element.tag == TASKTAG and rs.getAttrValue(childSolution,SOL_SCORE_TYPE) == scoreType:
-                result,scoreItem,maxScoreItem = self.solutionEvaluateAndPut(childSolution,task, parentOperator=(parentOperator+'.'+operatorType) if parentOperator is not None else operatorType)
+                result,scoreItem,maxScoreItem = self.__solutionEvaluateAndPut(childSolution,task, parentOperator=(parentOperator+'.'+operatorType) if parentOperator is not None else operatorType)
                 score = scoreFunc([score,scoreItem]) #if result else 0
                 maxScore = max(maxScore,maxScoreItem)
                 rs.setAttr(childSolution,'result','true' if result else 'false')
-                rs.setAttr(childSolution,'resultScore',self.formatScore(scoreItem))
+                rs.setAttr(childSolution,'resultScore',self.__formatScore(scoreItem))
                 results.append(result)
         # default solution has or relationship with neighbour solutions
-        # final result is calculated with multiOperations
-        finalResult = self.multiOperations(operatorType, copy.copy(results))
+        # final result is calculated with __multiOperations
+        finalResult = self.__multiOperations(operatorType, copy.copy(results))
         finalResult = not finalResult if rs.getAttrValue(element,SOL_NEGATION) is not None else finalResult
 
         # if container tag has score and finalResult True it will be result else the children function score return  
         return (finalResult, (float(rs.getAttrValue(element,SCORE_ATTR)) if finalResult and rs.getAttrValue(element,SCORE_ATTR) is not None else score),float(rs.getAttrValue(element,SCORE_ATTR)) if rs.getAttrValue(element,SCORE_ATTR) else maxScore)
         
-    def multiOperations(self,opType,operands):
+    def __multiOperations(self,opType,operands):
         '''Recursive function to process the sentence'''
         if len(operands) < 2:
             # only two operand is allow
@@ -156,5 +156,5 @@ class evaluate:
             else:
                 raise AKEPException(ERROR['GENERAL']['NOT_SUPPORTER_SENT']+opType)
         leftOperand = operands.pop(0)
-        rightOperand = self.multiOperations(opType,operands)
-        return self.multiOperations(opType,[leftOperand,rightOperand])
+        rightOperand = self.__multiOperations(opType,operands)
+        return self.__multiOperations(opType,[leftOperand,rightOperand])

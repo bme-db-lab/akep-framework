@@ -57,7 +57,7 @@ SEPARATOR_COMMUNICATE_TASK_END = '[TEND]'
 ANALYSE_EVAL_PROP = ['taskID','evaluateID','evaluationFunc','score','errorType']
 ANALYSE_CH_PROP = ['name','start','stop','errorType']
 ANALYSE_TASK_PROP = ['taskID','score','maxScore']
-ANALYSE_ASSESMENT_RUN = ['exID','ownerID','FolderID','start','stop','lastState','errorType']
+ANALYSE_ASSESMENT_RUN = ['exID','ownerID','FolderID','start','stop','lastState','score%','errorType']
 
 
 ####################################################################

@@ -2,7 +2,7 @@
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
 <xs:element name="tasks">
-<xs:complexType>
+<xs:complexType mixed="true">
 		<xs:sequence>
 			<xs:element name="task" maxOccurs="unbounded">
 				<xs:complexType>
