@@ -36,6 +36,9 @@ class analyse:
         return result
 
     def run(self):
+        '''
+        Create all analyse files, and writes these to defined path
+        '''
         chPropData = self.__makePropData('chAnalyse')
         evPropData = self.__makePropData('solAnalyse')
         taskPropData = self.__makePropData('taskAnalyse')

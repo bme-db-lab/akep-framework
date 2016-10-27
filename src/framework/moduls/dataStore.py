@@ -41,6 +41,10 @@ class dataStore:
         return resultContent(exerciseID,ownerID,self.exerciseRoots,self.getValueFromKH,self.getUserFromUserGroups,self.giveBackUser,logger,runningID,command)    
 
     def getValueFromKH(self,key, commandDict=None,exerciseRoot=None):
+        '''
+        The key hierarhy function
+        Order to find a key's value: command, exerciseRoot, local config, global config
+        '''
         result = None
         if commandDict is not None and key in commandDict:
             result = commandDict[key]
@@ -69,7 +73,9 @@ class dataStore:
             except:
                 logger.warning('Not valid eval value')
                 pass
+
         if commandDict is not None:
+            # save the result so it can be load from command later
             commandDict[key] = result
         
         return result
@@ -93,6 +99,9 @@ class dataStore:
             raise
 
     def reloadAllExercises(self):
+        '''
+        Exercise reloader function
+        '''
         if self.exerciseRoots is None:
             self.exerciseRoots = {}
         for path in iglob(self.exercisesPath + '/' + EXERCISE_FILE_FORMAT):
@@ -104,6 +113,10 @@ class dataStore:
 
 
     def openFileWithCheck(self,path,loader=None):
+        '''
+        Open a file and check with loader the schema if loader is not None
+        return the loader(data) reference if loader is not None else just file data
+        '''
         if os.path.isfile(path):        
             try:
                 data = open(path)
@@ -119,6 +132,10 @@ class dataStore:
         return None
 
     def getUserFromUserGroups(self,group):
+        '''
+        User pool defined by value of userGroups key
+        return a user (a user object from userGroups), or AKEPException if no available user
+        '''
         if group in self.userGroups:
             self.lock.acquire()
             if len(self.userGroups[group]) != 0:                
@@ -134,4 +151,7 @@ class dataStore:
         
 
     def giveBackUser(self,group,userObject):
+        '''
+        Give back the user to the pool
+        '''
         self.userGroups[group].append(userObject)

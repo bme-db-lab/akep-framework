@@ -20,6 +20,9 @@ class resultContent:
         self.command = command
 
     def deleteNotOutTags(self):
+        '''
+        Filter all elements which are has tagname from value of RESULT_NOT_COPY key and all element which has NOT_COPY_TO_RESULT_ATTR attr
+        '''
         for node in self.getAll(attrName=NOT_COPY_TO_RESULT_ATTR, attrValue='false'):
             parent = node.getparent()
             parent.remove(node)
@@ -36,6 +39,9 @@ class resultContent:
             self.referenceProcessor(element,element.get(REFERENCE_EXERCISE),element.get(REFERENCE_ID),element.get(REF_CHILDREN_FIND))
 
     def referenceProcessor(self, element, referenceExercise, referenceWithinExercise = None, referenceChildrenFind = None):
+        '''
+        Push referenced element as a element's child or replace the placeholder element
+        '''
         if referenceExercise is None:
             return
         if referenceExercise not in self.exerciseRoots:
@@ -53,11 +59,17 @@ class resultContent:
 
         for ind,child in enumerate(remoteElement if referenceChildrenFind is None else self.getAll(findText = referenceChildrenFind, element = remoteElement)):
             if elementParent is None:
+                # copy as element's child
                 element.append(copy.deepcopy(child))
             else:
+                # copy to placeholder position + ind
                 elementParent.insert(elementStartInd+ind,copy.deepcopy(child))
         
     def keyBinding(self, element = None):
+        '''
+        Replace all $key$ with key's value
+        runningID, username, password are built in keys
+        '''
         elementText = etree.tostring(self.resultXMLRoot if element is None else element).decode('utf-8')
         for key in re.findall(BINDING_REGEX, elementText):
             self.logger.debug('find key: '+key)
@@ -76,6 +88,9 @@ class resultContent:
         if element is not None:
             return etree.fromstring(elementText)
         self.resultXMLRoot = etree.fromstring(elementText)
+
+
+    ###### Helper functions #######
 
     def getScripts(self):
         scripts = []

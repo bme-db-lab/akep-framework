@@ -19,12 +19,22 @@ def contain(input, param, ORType, args):
 	return f(regexpToInput(input, j, args) for j in param.split(';'))
 
 def containAnd(input, param, args):
+	'''
+	Does input contain all items from param?
+	Format: <regular pattern 1>;…;<regular pattern N>
+	'''
 	return contain(input, param, False,args)
 
 def containOr(input, param, args):
+	'''
+	Format: <regular pattern 1>;…;<regular pattern N>
+	'''
 	return contain(input, param, True, args)
 
 def regexpToInput(input, param, args):
+	'''
+	Format: <regular pattern>
+	'''
 	if input == '' and param == '':
 		return True
 	if param == '':
@@ -36,6 +46,10 @@ def regexpToInput(input, param, args):
 	return re.search(param, input, re.DOTALL)
 
 def ColumnsEqualParam(input,param, args):
+	'''
+	Does input has the same attributes in first row than items from param?
+	Format: <regular pattern 1>,…,<regular pattern N>
+	'''
 	rows = input.split('\n')
 	firstColumns = rows[0].replace('"','').split(',')
 	paramColumns = param.split(',')
@@ -49,15 +63,32 @@ def ColumnsEqualParam(input,param, args):
 	return find == len(paramColumns)
 
 def rowNumEq(input,param, args):
+	'''
+	Format: <Natural number>
+	'''
 	return len(input.split('\n')) - 1 == int(param)
 
 def rowNumGrEq(input,param, args):
+	'''
+	Format: <Natural number>
+	'''
 	return len(input.split('\n')) - 1 >= int(param)
 
 def rowNumLtEq(input,param, args):
+	'''
+	Format: <Natural number>
+	'''
 	return len(input.split('\n')) - 1 <= int(param)
 
 def cellData(input,param, args):
+	'''
+	Does tranformed table (from input) contain a cell or a row based on param?
+	----
+	* (star) symbolum marks in this context that it is a undefined row/column index
+	cell expression = ([0-9]+|*),([0-9]+|*):<cell regular pattern>
+	Format (1): <cell expression 1>|||…|||<cell expression N> 
+	Format (2): ([0-9]+|*),*::<whole row regular pattern 1>|||…|||([0-9]+|*),*::<whole row regular pattern N>
+	'''
 	rows = input.replace('"','').split('\n')
 	for cell in param.split('|||'):
 		cellPos = cell.split(':')[0].split(',')
