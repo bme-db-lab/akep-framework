@@ -25,10 +25,10 @@ python3 main.py [-p CONF_PATH] [-l LOG_PATH] [-s ECERCISE_SCHEMA_PATH] [-c CHANN
 -	Socket close: AKÉP will close socket automatic after send the result in this socket.
 
 ### AKEP.cfg
-"host":"interface",
-"port": port,
-"exercisesPath":"Task desctiption file path",
-"notCopyFromDescrtiption":["script","info","exerciseKeys"] -> ezeket a tag-eket nem teszi bele az értékelés utáni kimenetbe a feladatleíróból
+- "host":"interface",
+- "port": port,
+- "exercisesPath":"Task desctiption file path",
+- "notCopyFromDescrtiption":["script","info","exerciseKeys"] -> ezeket a tag-eket nem teszi bele az értékelés utáni kimenetbe a feladatleíróból
 }
 
 Detailed description coming soon...
