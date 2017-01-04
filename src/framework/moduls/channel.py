@@ -40,7 +40,7 @@ class channel:
                     # .. with binding keys
                     data = self.resultContent.keyBinding(data)
                     # .. to inputstream
-                    script['taskInput'] = self.__xmlTaskInputToList(self.resultContent.getAll(element=data, tag=TASKTAG),False)
+                    script['taskInput'] = self.__xmlTaskInputToList(self.resultContent.getAll(element=data, tag=TASKTAG, attrName=TASK_ELEMENT_ID),False)
                 elif script[CH_INPUT_TYPE] == SCRIPT_INPUT_TYPE[2]:
                     if FROM_CAHNNEL not in script:
                         # if inputType is fromChannel and script tag does not has sourceChannel attr
@@ -70,7 +70,7 @@ class channel:
             if len(children) == 0:
                 # only text
                 inputs.append({'taskID':taskID,'input':rs.getText(inputNode)})
-            else:
+            elif inlineType:
                 # contain elements
                 inputstream = ''
                 for child in children:
