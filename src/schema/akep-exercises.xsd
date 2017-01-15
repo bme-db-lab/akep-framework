@@ -30,6 +30,7 @@
 	<xs:sequence>
 		<xs:element name="script" type="scriptType" maxOccurs="unbounded" minOccurs="0"/>
 		<xs:element name="exerciseKeys" type="exerciseKeysType" maxOccurs="1" minOccurs="0"/>
+		<xs:element name="info" type="infoType" maxOccurs="1" minOccurs="0"/>
 		<xs:any minOccurs="0" namespace="##any" processContents="skip"/>
 		<xs:element name="task" type="taskType" maxOccurs="unbounded" minOccurs="0"/>
 	</xs:sequence>
@@ -93,6 +94,35 @@
 	<xs:attributeGroup ref="refernceAttrGroup"/>
   <xs:attribute name="name" type="xs:string"/>
 	<xs:anyAttribute processContents="skip"/>
+</xs:complexType>
+
+<xs:complexType name="infoType">
+	<xs:sequence>
+		<xs:element name="text" maxOccurs="unbounded" minOccurs="0">
+			<xs:complexType>
+				<xs:simpleContent>
+					<xs:extension base="xs:string">
+						<xs:attribute name="position" use="required">
+							<xs:simpleType>
+								<xs:restriction base="xs:string">
+									<xs:enumeration value="head" />
+									<xs:enumeration value="tail" />
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:attribute>
+						<xs:attribute name="common" default="false">
+							<xs:simpleType>
+								<xs:restriction base="xs:string">
+									<xs:enumeration value="true" />
+									<xs:enumeration value="false" />
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:attribute>
+					</xs:extension>
+				</xs:simpleContent>
+			</xs:complexType>
+		</xs:element>
+	</xs:sequence>
 </xs:complexType>
 
 <xs:complexType name="inputstreamType">
