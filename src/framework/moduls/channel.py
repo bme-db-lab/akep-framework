@@ -93,7 +93,7 @@ class channel:
                 if CH_INPUT_TYPE in ch and ch[CH_INPUT_TYPE] == SCRIPT_INPUT_TYPE[2]:
                     refChOut = self.__getChannel(ch[FROM_CAHNNEL])
                     if refChOut == None or 'out' not in refChOut or refChOut['out'] == '':
-                        raise AKEPException(ERROR['NOT_FIND']['CH_OR_CHOUT'].format(ch[FROM_CAHNNEL],ch[CHANNEL_NAME_ATTR]))
+                        raise AKEPException(ERROR['NOT_FOUND']['CH_OR_CHOUT'].format(ch[FROM_CAHNNEL],ch[CHANNEL_NAME_ATTR]))
                     output = str(refChOut['out'])
                     if CH_INPUTTO in ch:
                         ch['arguments'] = ch['arguments'].replace(ch[CH_INPUTTO],output)
@@ -157,7 +157,7 @@ class channel:
                         ch['stop'] = str(time.time())
                         ch['errorType'] = 'Script not found'
                         self.terminateChannelScripts()
-                        raise AKEPException(ERROR['FILE']['NOT_FIND']+ch[CHANNEL_NAME_ATTR])
+                        raise AKEPException(ERROR['FILE']['NOT_FOUND']+ch[CHANNEL_NAME_ATTR])
                     except subprocess.TimeoutExpired:
                         ch['errorType'] = 'Channel time out'
                         ch['stop'] = str(time.time())
@@ -192,7 +192,7 @@ class channel:
             for ch in self.channels[entry]:
                 if ch[CHANNEL_NAME_ATTR] == name:
                     return ch
-        raise AKEPException('Not find channel {}'.format(name))
+        raise AKEPException('Not found channel {}'.format(name))
 
     def getChannelTaskOutput(self,channelName,taskID,shouldError):
         '''

@@ -75,6 +75,7 @@
 	<xs:attribute name="channelName" type="xs:string" />
 	<xs:attribute name="opererator" type="operatorType" />
 	<xs:attribute name="errorCheck" type="xs:string" />
+	<xs:attribute name="evaluateArgs" type="xs:string" />
 	<xs:attributeGroup ref="refernceAttrGroup"/>
 	<xs:anyAttribute processContents="skip"/>
 </xs:complexType>

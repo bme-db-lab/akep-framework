@@ -70,4 +70,4 @@ EXERCISE_PATH = 'exercisesPath'
 HOST = 'host'
 PORT = 'port'
 # optional
-RESULT_NOT_COPY = 'notCopyFromDescrtiption'
+RESULT_NOT_COPY = 'notCopyFromDescription'

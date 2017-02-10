@@ -64,7 +64,7 @@ class dataStore:
             elif key in self.globalConf:
                 result = self.globalConf[key]  
             else:
-                raise AKEPException(ERROR['NOT_FIND']['KEY_IN_HIERAR']+key)
+                raise AKEPException(ERROR['NOT_FOUND']['KEY_IN_HIERAR']+key)
         
         # if the value start with @ character, put to eval function
         if isinstance(result,str) and result != '' and result[0]=='@':
@@ -128,7 +128,7 @@ class dataStore:
                 except:
                     self.logger.exception(ERROR['FILE']['INVALID']+path)
         else:
-            self.logger.warning(ERROR['FILE']['NOT_FIND']+path)
+            self.logger.warning(ERROR['FILE']['NOT_FOUND']+path)
         return None
 
     def getUserFromUserGroups(self,group):
@@ -147,7 +147,7 @@ class dataStore:
                 self.lock.release()
                 raise AKEPException('No available user in group: '+group)
         else:
-            raise AKEPException(ERROR['NOT_FIND']['USER_GROUP'].format(group))
+            raise AKEPException(ERROR['NOT_FOUND']['USER_GROUP'].format(group))
         
 
     def giveBackUser(self,group,userObject):

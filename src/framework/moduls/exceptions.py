@@ -1,10 +1,10 @@
 #############################################################
 # ERROR MESSAGES
 ERROR = {
-    'NOT_FIND' : {
-        'EXERCISE_TO_ID': 'Not find exercise definition to ',
-        'KEY_IN_HIERAR': 'Not find key in key hierarchy: ',
-        'CH_OR_CHOUT': 'Not find {} channel or it is not have out yet, channelName: {}',
+    'NOT_FOUND' : {
+        'EXERCISE_TO_ID': 'Not found exercise definition to ',
+        'KEY_IN_HIERAR': 'Not found key in key hierarchy: ',
+        'CH_OR_CHOUT': 'Not found {} channel or it is not have out yet, channelName: {}',
         'USER_GROUP':'No find user group {}'
     },
     'UNEXPECTED':{
@@ -13,7 +13,7 @@ ERROR = {
     },
     'FILE':{
         'INVALID': 'Invalid sintax in: ',
-        'NOT_FIND': 'Not find file: '
+        'NOT_FOUND': 'Not found file: '
     },
     'SCRIPT':{
         'MISSING_PATH':'Missing path in script: ',

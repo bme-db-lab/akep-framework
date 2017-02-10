@@ -99,7 +99,7 @@ class evaluate:
             try:
                 # if channel output not failed to actual task or we would like to evaluate the error
                 if taskOutput[1]:
-                    result = getattr(evaluateFunctions, evulationMode)(str(taskOutput[0]).strip().lower(),requiredSolution,rs.getAttrValue(element,SOL_SHOULD_ERROR))
+                    result = getattr(evaluateFunctions, evulationMode)(str(taskOutput[0]).strip().lower(),requiredSolution,rs.getAttrValue(element,SOL_OTHER_OPTION))
                     # negate the result if solution has Negation attr
                     result = not result if rs.getAttrValue(element,SOL_NEGATION) is not None else result
                     self.toAnalyse.append([rs.getAttrValue(task,TASK_ELEMENT_ID),solID,evulationMode,str(score if result else 0),''])

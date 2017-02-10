@@ -7,7 +7,7 @@ import re
 class resultContent:
     def __init__(self,exerciseID,ownerID,exerciseRoots,keyFn,getUserFn,giveBackUserFn,logger,runningID,command):
         if exerciseID not in exerciseRoots:
-            raise AKEPException(ERROR['NOT_FIND']['EXERCISE_TO_ID']+exerciseID)
+            raise AKEPException(ERROR['NOT_FOUND']['EXERCISE_TO_ID']+exerciseID)
         self.resultXMLRoot = copy.deepcopy(exerciseRoots[exerciseID])
         self.resultXMLRoot.set(EXERCISE_ID, exerciseID)
         self.resultXMLRoot.set(OWNER_ID, ownerID)
@@ -45,7 +45,7 @@ class resultContent:
         if referenceExercise is None:
             return
         if referenceExercise not in self.exerciseRoots:
-            raise AKEPException(ERROR['NOT_FIND']['EXERCISE_TO_ID']+referenceExercise)
+            raise AKEPException(ERROR['NOT_FOUND']['EXERCISE_TO_ID']+referenceExercise)
         remoteElement = self.getAll(attrName=REFERENCE_TARGET_ID, attrValue=referenceWithinExercise, element = self.exerciseRoots[referenceExercise]) if referenceWithinExercise is not None else self.exerciseRoots[referenceExercise]
         if remoteElement is None:
             element.set(TO_ELEMENT_ERROR_ATTR,'ReferenceError')
