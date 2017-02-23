@@ -153,6 +153,8 @@ class channel:
                                 ch['out'],lastRightIndex = self.__createChannelOutputToTaskXML(ch['taskInput'],out,ch['out'],concatInnerInputToTaskInp) if 'taskInput' in ch else (out,None)
                                 ch['error'],nothing = self.__createChannelOutputToTaskXML(ch['taskInput'],error,ch['error'],concatInnerInputToTaskInp) if 'taskErrorHandle' in ch else (error,None)
                             self.logger.debug('channel: {} out: {}'.format(ch[CHANNEL_NAME_ATTR], rs.toStringFromElement(ch['out']).decode('utf-8') if rs.isElementType(ch['out']) else ch['out']))                            
+                            if ch['error'] is not None:
+                                self.logger.debug('channel: {} error out: {}'.format(ch[CHANNEL_NAME_ATTR], rs.toStringFromElement(ch['error']).decode('utf-8') if rs.isElementType(ch['error']) else ch['error']))
                     except FileNotFoundError:
                         ch['stop'] = str(time.time())
                         ch['errorType'] = 'Script not found'
@@ -223,7 +225,7 @@ class channel:
         Handle: error state with result second parameter
         return: xml format tasks output, valid last task index from taskInputStream
         '''
-        tasks = xmlTextList.strip().strip(SEPARATOR_COMMUNICATE_TASK_END).split(SEPARATOR_COMMUNICATE_TASK_END)
+        tasks = xmlTextList.strip().rstrip(SEPARATOR_COMMUNICATE_TASK_END).split(SEPARATOR_COMMUNICATE_TASK_END)
 
         if concatInnerInputToTaskInp != '' and len(tasks) > 0:
             # delete the output which belong to the initial inputstream (if it exist)

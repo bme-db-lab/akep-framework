@@ -1,9 +1,11 @@
 __pycache__
+
+# AKÉP configuration + logs
 *.local.cfg
 *.log
-command.my
-.idea/
-.vscode/
+
+# AKÉP WSGI + directory structure builder
+util
 
 # source is in README.md
 README.html

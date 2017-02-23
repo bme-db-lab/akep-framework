@@ -140,10 +140,10 @@ class resultContent:
         element.text = text
 
     def toStringFromElement(element):
-        return etree.tostring(element)
+        return etree.tostring(element, encoding="utf8")
 
     def toString(self):
-        return etree.tostring(self.resultXMLRoot)
+        return etree.tostring(self.resultXMLRoot, encoding="utf8")
 
     def getChildren(element):
         return element.getchildren()

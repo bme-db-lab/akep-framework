@@ -4,15 +4,14 @@ from moduls.resultContent import resultContent
 import os
 from lxml import etree
 import json
-from glob import iglob
 import collections
 import threading
 
 # moduls to use eval
 import time
+import queue
 
 class dataStore:
-    lock = threading.Lock()
 
     def __init__(self, localConfigFile, schemaFile, logger, channelScemaFile = None):
         self.logger = logger
@@ -24,21 +23,25 @@ class dataStore:
             logger.critical(ERROR['GENERAL']['MISSING_TO_START'])
             return
         
-        self.userGroups = self.getValueFromKH('userGroups')
-        self.exercisesPath = self.getValueFromKH(EXERCISE_PATH)
+        userGroups = self.getValueFromKH('userGroups')
+
+        self.userPool = {}
+
+        for userType,users in userGroups.items():
+            self.userPool[userType] = queue.Queue()
+            for user in users:
+                self.userPool[userType].put(user)
+
         self.schemaParser = etree.XMLParser(schema = etree.XMLSchema(self.schema))
         if chSchema is not None:
-            self.chSchemaParser = etree.XMLParser(schema = etree.XMLSchema(chSchema))        
-        # Load all exercise from given directory
-        self.exerciseRoots = None
-        self.reloadAllExercises()
+            self.chSchemaParser = etree.XMLParser(schema = etree.XMLSchema(chSchema))
 
 
     def isReady(self):
         return self.globalConf and self.schema
 
-    def createResultContent(self,exerciseID,ownerID, logger, runningID, command):
-        return resultContent(exerciseID,ownerID,self.exerciseRoots,self.getValueFromKH,self.getUserFromUserGroups,self.giveBackUser,logger,runningID,command)    
+    def createResultContent(self,exerciseID,ownerID, logger, runningID, command, exerciseRoots):
+        return resultContent(exerciseID,ownerID,exerciseRoots,self.getValueFromKH,self.getUserFromUserGroups,self.giveBackUser,logger,runningID,command)
 
     def getValueFromKH(self,key, commandDict=None,exerciseRoot=None):
         '''
@@ -98,26 +101,12 @@ class dataStore:
         except:
             raise
 
-    def reloadAllExercises(self):
-        '''
-        Exercise reloader function
-        '''
-        if self.exerciseRoots is None:
-            self.exerciseRoots = {}
-        for path in iglob(self.exercisesPath + '/' + EXERCISE_FILE_FORMAT):
-            elementTreeObject = self.openFileWithCheck(path,self.checkExerciseValid)
-            if elementTreeObject is not None:
-                key = path.rsplit('.', 2)[1]
-                self.exerciseRoots[key] = elementTreeObject.getroot()
-                self.logger.info('Exercise loaded: '+key)
-
-
     def openFileWithCheck(self,path,loader=None):
         '''
         Open a file and check with loader the schema if loader is not None
         return the loader(data) reference if loader is not None else just file data
         '''
-        if os.path.isfile(path):        
+        if os.path.isfile(path):
             try:
                 data = open(path)
             except IOError:
@@ -136,9 +125,12 @@ class dataStore:
         User pool defined by value of userGroups key
         return a user (a user object from userGroups), or AKEPException if no available user
         '''
+
+        return self.userPool[group].get()
+        '''
         if group in self.userGroups:
             self.lock.acquire()
-            if len(self.userGroups[group]) != 0:                
+            if len(self.userGroups[group]) != 0:
                 userObject = self.userGroups[group][0]
                 self.userGroups[group].remove(userObject)
                 self.lock.release()
@@ -148,10 +140,12 @@ class dataStore:
                 raise AKEPException('No available user in group: '+group)
         else:
             raise AKEPException(ERROR['NOT_FOUND']['USER_GROUP'].format(group))
-        
+        '''
 
     def giveBackUser(self,group,userObject):
         '''
         Give back the user to the pool
         '''
-        self.userGroups[group].append(userObject)
+        self.userPool[group].task_done()
+        self.userPool[group].put(userObject)
+        #self.userGroups[group].append(userObject)

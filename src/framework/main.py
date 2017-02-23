@@ -17,48 +17,68 @@ import json
 import threading
 import time
 import os
+import queue
+from glob import iglob
 
 class AKEPProcess():
-    def __init__(self, command, logger, runningID):
-        self.runningID = runningID  
-        self.logger = logger
+    def __init__(self, command):
         self.command = command
         self.__lastState = 'init'
+        self.exerciseRoots = {}
+        self.exercisesPath = store.getValueFromKH(EXERCISE_PATH,self.command)
+
+    def loadAllExercises(self, logger):
+        for path in iglob(self.exercisesPath + '/' + EXERCISE_FILE_FORMAT):
+            elementTreeObject = store.openFileWithCheck(path,store.checkExerciseValid)
+            if elementTreeObject is not None:
+                key = path.rsplit('.', 2)[1]
+                self.exerciseRoots[key] = elementTreeObject.getroot()
+                logger.info('Exercise loaded: '+key)
+            else:
+                return (False,path)
+        return (True,None)
     
-    def run(self):
+    def run(self, logger, runningID):
+        exerciseLoadSuccess = self.loadAllExercises(logger)
+        if not exerciseLoadSuccess[0]:
+            raise AKEPException(ERROR['FILE']['INVALID'] + exerciseLoadSuccess[1])
+
         self.exerciseID = store.getValueFromKH(EXERCISE_ID,self.command)
         self.ownerID = store.getValueFromKH(OWNER_ID,self.command)
-        self.resultContent = store.createResultContent(self.exerciseID,self.ownerID, self.logger, self.runningID, self.command)
+        self.resultContent = store.createResultContent(self.exerciseID,self.ownerID, logger, runningID, self.command, self.exerciseRoots)
         self.__lastState = 'Start [OK]'
-        self.logger.info(self.__lastState)
+        logger.info(self.__lastState)
 
         self.resultContent.referenceFormating()
         self.__lastState = 'References [OK]'
-        self.logger.info(self.__lastState)
+        logger.info(self.__lastState)
 
         self.resultContent.keyBinding()
         self.__lastState = 'Key binding [OK]'
-        self.logger.info(self.__lastState)
+        logger.info(self.__lastState)
 
-        self.__channels = channel(self.resultContent, self.logger, store.checkTaskChannelInputStreamValid,store.checkTaskChannelStringValid, store.openFileWithCheck)
+        self.__channels = channel(self.resultContent, logger, store.checkTaskChannelInputStreamValid,store.checkTaskChannelStringValid, store.openFileWithCheck)
         self.__lastState = 'Channels initialize [OK]'
-        self.logger.info(self.__lastState)        
+        logger.info(self.__lastState)
 
         self.openListKillFn = self.__channels.terminateChannelScripts
         self.__channels.run()
         self.__lastState = 'Channels run [OK]'
-        self.logger.info(self.__lastState)
+        logger.info(self.__lastState)
 
-        self.__evaluateModul = evaluate(self.__channels.getChannelTaskOutput,self.resultContent, self.logger)
+        self.__evaluateModul = evaluate(self.__channels.getChannelTaskOutput,self.resultContent, logger)
         self.__evaluateModul.run()
         self.__lastState = 'Evaluate all [OK]'
-        self.logger.info(self.__lastState)
+        logger.info(self.__lastState)
 
         self.resultContent.deleteNotOutTags()
         self.__lastState = 'Filter [OK]'
-        self.logger.info(self.__lastState)
+        logger.info(self.__lastState)
 
         return self.resultContent.toString()
+
+    def getLastState(self):
+        return self.__lastState
     
     def getAnalyseObjet(self):
         try:
@@ -83,8 +103,8 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
     def handle(self):
         runningID = threading.current_thread().name.split('-')[1]
 
-        logger = AKEPLogger.getLogger(runningID)
-        logger.info('New connection: '+str(self.request.getpeername()))
+        globalLogger = AKEPLogger.getLogger(runningID)
+        globalLogger.info('New connection: '+str(self.request.getpeername()))
         start = time.time()
 
         errorType = ''
@@ -92,9 +112,27 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
         try:
             data = self.request.recv(1024).strip()
             command = json.loads(data.decode('utf-8'))
-            logger = AKEPLogger.initialize(logpath+'/'+store.getValueFromKH('timeStamp',command)+'-'+runningID+'.log', runningID)
-            akepProcess = AKEPProcess(command, logger, runningID)
-            self.request.sendall(akepProcess.run())            
+            if 'get' in command:
+                if command['get'] == 'status' and 'timeStamp' in command and command['timeStamp'] in asyncWorkerAnswerStates:
+                    status = asyncWorkerAnswerStates[command['timeStamp']]()
+                    resultXMLRoot = rs.createElement(EXERCISE, {'status': status})
+                    self.request.sendall(rs.toStringFromElement(resultXMLRoot))
+                return
+
+            timestamp = store.getValueFromKH('timeStamp',command)
+            akepProcess = AKEPProcess(command)
+
+            if 'async' in command and asyncWorkerQueue:
+                globalLogger.info('Async answer type')
+                akepProcess.globalLogger = globalLogger
+                asyncWorkerQueue.put(akepProcess)
+                globalLogger.info('Connection closed')
+                return
+            else:
+                fullLogPath = logpath + '/' + timestamp + '-'+runningID+'.log'
+                globalLogger.info('Detail log: '+fullLogPath)
+                logger = AKEPLogger.initialize(fullLogPath, runningID)
+                self.request.sendall(akepProcess.run(logger,runningID))
         except AKEPException as err:
             # create an empty exercise element with error text from the exception
             errorType = str(err).replace(',',' ')
@@ -110,20 +148,12 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                     resultXMLRoot = rs.createElement(EXERCISE, {TO_ELEMENT_ERROR_ATTR: str(err),'exerciseID': 'undefined', 'ownerID': 'undefined'})
                 self.request.sendall(rs.toStringFromElement(resultXMLRoot))
             except:
-                logger.exception('Send error text to socket failed')                
-            logger.exception(ERROR['UNEXPECTED']['SOCKET_CLOSE'])
+                logger.exception(ERROR['UNEXPECTED']['SOCKET_CLOSE'])
 
         stop = time.time()
         
-        try:
-            if hasattr(akepProcess,'resultContent'):
-                akepProcess.resultContent.giveBackUser()
-            if hasattr(akepProcess,'openListKillFn'):
-                akepProcess.openListKillFn(True)
-        except UnboundLocalError:
-            pass
-        except:
-            logger.warning('Can not give back the user to the pool or can not close a process')
+        if 'akepProcess' in locals():
+            AKEPClear(akepProcess, globalLogger)
         
         try:
             akepProcAnalyseObj = akepProcess.getAnalyseObjet()
@@ -134,9 +164,57 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
             pass
         except:
             logger.exception('Analyse failed')
-        logger.info('Connetion closed')
+        globalLogger.info('Connection closed')
+
+def AKEPClear(akepProcess, globalLogger):
+    try:
+        if hasattr(akepProcess,'resultContent'):
+            akepProcess.resultContent.giveBackUser()
+        if hasattr(akepProcess,'openListKillFn'):
+            akepProcess.openListKillFn(True)
+    except UnboundLocalError:
+        pass
+    except:
+        globalLogger.warning('Can not give back the user to the pool or can not close a process')
+
+def asyncWorker():
+    global asyncWorkerAnswerStates
+    while True:
+        akepProcess = asyncWorkerQueue.get()
+        runningID = threading.current_thread().name.split('-')[1]
+
+        asyncAnswerPath = store.getValueFromKH(SOLTARGET, akepProcess.command)
+        timestamp = store.getValueFromKH('timeStamp',akepProcess.command)
+
+        fullLogPath = asyncAnswerPath + '/' + timestamp
+        os.makedirs(fullLogPath)
+        logger = AKEPLogger.initialize(fullLogPath + '/result.log', 'A-1'+runningID)
+        writePath = asyncAnswerPath + '/' + timestamp + '/result.xml'
+        
+        asyncWorkerAnswerStatesLock.acquire()
+        asyncWorkerAnswerStates[timestamp] = akepProcess.getLastState
+        asyncWorkerAnswerStatesLock.release()
+
+        try:
+            result = akepProcess.run(logger,runningID)
+        except Exception as err:
+            logger.exception('Async answer failed')
+            resultXMLRoot = rs.createElement(EXERCISE, {TO_ELEMENT_ERROR_ATTR: str(err),'exerciseID': akepProcess.exerciseID if hasattr(akepProcess,'exerciseID') else 'undefined', 'ownerID': akepProcess.ownerID if hasattr(akepProcess,'ownerID') else 'undefined'})
+            result = rs.toStringFromElement(resultXMLRoot)
+
+        AKEPClear(akepProcess,akepProcess.globalLogger)
+        
+        with open(writePath,'wb') as f:
+            f.write(result)
+
+        asyncWorkerAnswerStatesLock.acquire()
+        asyncWorkerAnswerStates.pop(timestamp, None)
+        asyncWorkerAnswerStatesLock.release()
+
+        asyncWorkerQueue.task_done()
+
 def main():
-    global store,logpath
+    global store,logpath,asyncWorkerQueue,asyncWorkerAnswerStates,asyncWorkerAnswerStatesLock
     
     parser = argparse.ArgumentParser('AKEP')
     parser.add_argument('-p','--path', metavar='PATH', help="AKEP local configuration file's path", default='akep.local.cfg', type=str)
@@ -146,7 +224,7 @@ def main():
     
     args = parser.parse_args()
 
-    logpath = os.path.dirname(os.path.realpath(__file__)) + '/log'
+    logpath = './log'
     if not os.path.exists(logpath):
         os.makedirs(logpath)
     logger = AKEPLogger.initialize(logpath + '/' + args.logger)
@@ -155,6 +233,15 @@ def main():
     store = dataStore(args.path,args.schema,logger, args.chSchema)
 
     if store.isReady():
+        if store.getValueFromKH(ASYNCANSWER):
+            asyncWorkerQueue = queue.Queue()
+            asyncWorkerAnswerStates = {}
+            asyncWorkerAnswerStatesLock = threading.Lock()
+            for i in range(store.getValueFromKH(ASYNCANSWER_NUM)):
+                t = threading.Thread(target=asyncWorker)
+                t.daemon = True
+                t.start()
+            logger.info('Async answer active')
         try:
             # Create server pool with asynchronous handler
             server = evaluateRequestServer((store.getValueFromKH(HOST), store.getValueFromKH(PORT)), ThreadedTCPRequestHandler)
@@ -163,10 +250,15 @@ def main():
             server_thread.daemon = True
             server_thread.start()
             server_thread.join()
+            if asyncWorkerQueue:
+                asyncWorkerQueue.join()
         except (KeyboardInterrupt, SystemExit):
             server.shutdown()
-            logger.info('Wait for worker thread')
-            server.join()            
+            logger.info('Wait for server threads')
+            server.join()
+            if store.getValueFromKH(ASYNCANSWER):
+                logger.info('Wait for worker threads')
+                asyncWorkerQueue.join()        
             server.server_close()
         except:
             logger.exception(ERROR['UNEXPECTED']['AKEP_STOP'])

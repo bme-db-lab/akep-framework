@@ -71,3 +71,6 @@ HOST = 'host'
 PORT = 'port'
 # optional
 RESULT_NOT_COPY = 'notCopyFromDescription'
+ASYNCANSWER = 'asyncAnswer'
+ASYNCANSWER_NUM = 'asyncAnswerWorkerThreadNum'
+SOLTARGET = 'solTargetDir'
