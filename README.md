@@ -1,6 +1,9 @@
 # AKÉP
 
-## RUN:
+## INSTALL
+Copy akep-framework\src\framework\akep.cfg.sample to akep-framework\src\framework\akep.cfg
+
+## RUN
 
 ```shell
 python3 main.py [-p CONF_PATH] [-l LOG_PATH] [-s ECERCISE_SCHEMA_PATH] [-c CHANNEL_INPUT_SCHEMA_PATH]
