@@ -3,6 +3,7 @@ import threading
 import queue
 import threading
 
+
 class ThreadPoolMixin:
     """
     Mixin to use a fixed pool of threads to handle requests.
@@ -27,7 +28,9 @@ class ThreadPoolMixin:
             thread.start()
 
     def process_request_thread(self):
-        """Same as in BaseServer, but as a thread."""
+        """
+        Same as in BaseServer, but as a thread.
+        """
         while True:
             try:
                 request, client_address = self._request_queue.get(
@@ -39,7 +42,7 @@ class ThreadPoolMixin:
                 if self._shutdown_event.isSet():
                     return
                 continue
-            try:                
+            try:
                 self.finish_request(request, client_address)
                 self.shutdown_request(request)
             except:
@@ -48,11 +51,15 @@ class ThreadPoolMixin:
             self._request_queue.task_done()
 
     def process_request(self, request, client_address):
-        """Queue the given request."""
+        """
+        Queue the given request.
+        """
         self._request_queue.put((request, client_address))
 
     def join(self):
-        """Wait on the pool to clear and shut down the worker threads."""
+        """
+        Wait on the pool to clear and shut down the worker threads.
+        """
         # A nicer place for this would be shutdown(), but this being a mixin,
         # that method can't safely do anything with that method, thus we add
         # an extra method explicitly for clearing the queue and shutting
@@ -62,7 +69,9 @@ class ThreadPoolMixin:
 
 
 class ThreadPoolTCPServer(ThreadPoolMixin, socketserver.TCPServer):
-    """Implementation of TCPServer with a thread pool for incoming requests."""
+    """
+    Implementation of TCPServer with a thread pool for incoming requests.
+    """
 
     def __init__(self, server_address, request_class):
         ThreadPoolMixin.__init__(self)
