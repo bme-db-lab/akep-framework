@@ -2,7 +2,7 @@
 import re
 import collections
 
-CSVDelimiter = '|||'
+CSVDelimiter = '-|-'
 
 def getDictFromArgs(Args):
     resDict = collections.defaultdict(list)
@@ -102,7 +102,7 @@ def cellData(input, param, args):
     '''
     rows = input.replace('"', '').split('\n')
     for cell in param.split('|||'):
-        cellPos = cell.split(':')[0].split(CSVDelimiter)
+        cellPos = cell.split(':')[0].split(',')
         allColumnMode = False
         if len(cell.split('::')) == 2:
             cellStr = cell.split('::')[1]
