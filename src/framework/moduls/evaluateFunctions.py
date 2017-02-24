@@ -57,9 +57,10 @@ def ColumnsEqualParam(input, param, args):
     Does input has the same attributes in first row than items from param?
     Format: <regular pattern 1>,…,<regular pattern N>
     """
+    delimiter = CSVDelimiter if CSVDelimiter in input else ','
     rows = input.split('\n')
-    firstColumns = rows[0].replace('"', '').split(CSVDelimiter)
-    paramColumns = param.split(CSVDelimiter)
+    firstColumns = rows[0].replace('"', '').split(delimiter)
+    paramColumns = param.split(delimiter)
     find = 0
     for paramColumn in paramColumns:
         for col in firstColumns:
@@ -100,6 +101,7 @@ def cellData(input, param, args):
     Format (1): <cell expression 1>|||…|||<cell expression N>
     Format (2): ([0-9]+|*),*::<whole row regular pattern 1>|||…|||([0-9]+|*),*::<whole row regular pattern N>
     '''
+    delimiter = CSVDelimiter if CSVDelimiter in input else ','
     rows = input.replace('"', '').split('\n')
     for cell in param.split('|||'):
         cellPos = cell.split(':')[0].split(',')
@@ -113,9 +115,9 @@ def cellData(input, param, args):
         if cellPos[0] == '*' and cellPos[1] != '*':
             ItContain = False
             for row in rows:
-                if not allColumnMode and len(row.split(CSVDelimiter)) <= int(cellPos[1]):
+                if not allColumnMode and len(row.split(delimiter)) <= int(cellPos[1]):
                     return False
-                if containAnd(row if allColumnMode else row.split(CSVDelimiter)[int(cellPos[1])], cellStr, args):
+                if containAnd(row if allColumnMode else row.split(delimiter)[int(cellPos[1])], cellStr, args):
                     ItContain = True
                     break
             if not ItContain:
@@ -128,7 +130,7 @@ def cellData(input, param, args):
                     return False
             else:
                 ItContain = False
-                for col in rows[int(cellPos[0]) + 1].split(CSVDelimiter):
+                for col in rows[int(cellPos[0]) + 1].split(delimiter):
                     if containAnd(col, cellStr, args):
                         ItContain = True
                         break
@@ -137,7 +139,7 @@ def cellData(input, param, args):
         elif cellPos[1] == '*' and cellPos[0] == '*':
             ItContain = False
             for row in rows:
-                for col in row.split(CSVDelimiter):
+                for col in row.split(delimiter):
                     if containAnd(row if allColumnMode else col, cellStr, args):
                         ItContain = True
                         break
@@ -152,8 +154,8 @@ def cellData(input, param, args):
                 if not containAnd(rows[int(cellPos[0]) + 1], cellStr, args):
                     return False
             else:
-                if len(rows[int(cellPos[0]) + 1].split(CSVDelimiter)) <= int(cellPos[1]):
+                if len(rows[int(cellPos[0]) + 1].split(delimiter)) <= int(cellPos[1]):
                     return False
-                if not containAnd(rows[int(cellPos[0]) + 1].split(CSVDelimiter)[int(cellPos[1])], cellStr, args):
+                if not containAnd(rows[int(cellPos[0]) + 1].split(delimiter)[int(cellPos[1])], cellStr, args):
                     return False
     return True
