@@ -2,7 +2,7 @@
 import re
 import collections
 
-CSVDelimiter = '-|-'
+CSVDelimiter = '-#-'
 
 def getDictFromArgs(Args):
     resDict = collections.defaultdict(list)
