@@ -1,0 +1,10 @@
+configGlobal = {
+    urlResultView:"",
+    unauthorizedTOUrl:"",
+    downloadTests:"",
+    activeTest:"",
+    startTest:"",
+    downloadTestLog:"",
+    downloadWork:"",
+    downloadTest:""
+};

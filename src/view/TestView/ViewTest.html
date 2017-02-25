@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html ng-app="AKEPView">
+
+<head>
+    <meta charset="UTF-8">
+    <title>AKÉP Teszt</title>
+    <meta http-equiv="cache-control" content="no-cache" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="../ext/angular/angular.js"></script>
+    <script src="../ext/angular/angular-animate.js"></script>
+    <script src="../ext/jquery/jquery-3.1.1.min.js"></script>
+    <link rel="stylesheet" href="../ext/font-awesome/css/font-awesome.min.css">
+	<script src="../ext/showdown/showdown.min.js"></script>
+    <script src="config.js"></script>
+    <script src="controllerTest.js"></script>
+    <style>
+        .loading {
+            position: fixed;
+            left: calc(50% - 30px);
+            top: calc(50% - 30px);
+            z-index: 101;
+        }
+		.bigContainer{
+			margin: auto;
+			max-width: 800px;
+			padding-top: 20px;
+			background-color: aliceblue;
+			border-radius: 10px;
+		}
+    </style>
+</head>
+
+<body ng-controller="AKEPViewTestController" style="padding:30px">
+	<i ng-show="globalLoad" class="fa fa-cog fa-spin fa-3x fa-fw loading"></i>
+	<div class="bigContainer">
+		<div class="container-fluid" ng-show="prevTests && !testStarted" style="margin-bottom:30px">
+			<div class="form-group row">
+				<label class="col-sm-3 col-form-label">Előző teszt választása</label>
+				<div class="col-sm-9">
+					<select class="form-control" name="workType" ng-model="selectedPrevTest" ng-options="x.viewDate for x in prevTests" required></select>
+				</div>
+			</div>
+			<div style="text-align:center">
+				<button class="btn btn-primary" ng-click="viewPrevTest()" ng-disabled="selectedPrevTest == undefined">Eredmény</button>
+			</div>
+		</div>
+		
+		<div ng-hide="globalLoad" class="container-fluid">
+			<form name="myForm" ng-hide="testStarted">
+				<div class="form-group row">
+					<label class="col-sm-3 col-form-label">Feladatsor száma</label>
+					<div class="col-sm-9">
+						<input name="exerciseNumber" type="number" ng-model="test.exerciseNumber" class="form-control" placeholder="22" required>
+					</div>
+				</div>
+				<div class="form-group row">
+					<label class="col-sm-3 col-form-label">Mérés</label>
+					<div class="col-sm-9">
+						<input type="text" name="exerciseType" class="form-control" ng-model="test.exerciseType" placeholder="soa" required>
+					</div>
+				</div>
+				<div class="form-group row">
+					<label class="col-sm-3 col-form-label">Branch</label>
+					<div class="col-sm-9">
+						<input type="text" name="branch" class="form-control" ng-model="test.branch" placeholder="master" required>
+					</div>
+				</div>
+				<div class="form-group row">
+					<label class="col-sm-3 col-form-label">Munkadarab</label>
+					<div class="col-sm-9">
+						<select class="form-control" name="workType" ng-model="test.workType" ng-options="x for x in workTypes" required></select>
+					</div>
+				</div>
+				<div class="form-group row" ng-hide="test.workType == undefined || test.workType == 'Egyedi'">
+					<label class="col-sm-3 col-form-label">Neptun</label>
+					<div class="col-sm-9">
+						<input type="text" name="neptun" class="form-control" ng-model="test.neptun" placeholder="ASD123" required>
+					</div>
+				</div>
+				<div class="form-group row" ng-hide="test.workType != 'Egyedi'">
+					<label class="col-sm-3 col-form-label">Elérési út</label>
+					<div class="col-sm-9">
+						<input type="file" name="customFile" class="form-control" ng-model="test.customFile" placeholder="ASD123" required>
+					</div>
+				</div>
+				<div class="form-group row">
+					<div class="offset-sm-2 col-sm-10">
+						<button type="submit" class="btn btn-primary" ng-click="testStart()" ng-disabled="test.exerciseNumber == undefined || test.exerciseType == undefined || test.branch == undefined || test.workType == undefined || test.workType == undefined || (test.customFile == undefined && test.workType == 'Egyedi') || (test.neptun == undefined && test.workType != 'Egyedi')">Tesztelés indítása</button>
+					</div>
+				</div>
+			</form>
+			<div class="progress" ng-show="testStarted || status">
+				<div class="progress-bar progress-bar-striped progress-bar-{{progressStyle}} active" role="progressbar" style="width:100%">
+				  {{status}}
+				</div>
+			</div>
+			<div ng-show="error" class="alert alert-danger" ng-bind-html="errorContent"></div>
+			<div ng-show="success" class="alert alert-success" ng-bind-html="successContent"></div>
+			<div ng-show="log" class="alert alert-info" ng-bind-html="logContent"></div>
+		</div>
+	</div>
+</body>
+
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html ng-app="AKEPView">
+
+<head>
+    <meta charset="UTF-8">
+    <title>AKÉP</title>
+    <meta http-equiv="cache-control" content="no-cache"/>
+    <link rel="stylesheet" href="ext/bootstrap/bootstrap.min.css">
+    <script src="ext/angular/angular.js"></script>
+    <script src="ext/angular/angular-animate.js"></script>
+    <script src="ext/jquery/jquery-3.1.1.min.js"></script>
+    <link rel="stylesheet" href="ext/font-awesome/css/font-awesome.min.css">
+    <script src="ext/abn-tree/abn_tree_directive.js"></script>
+    <link rel="stylesheet" href="ext/abn-tree/abn_tree.css">
+    <script src="ext/showdown/showdown.min.js"></script>
+    <script src="config.js"></script>
+    <script src="controller.js"></script>
+    <link rel="stylesheet" href="ext/foundation/foundation.min.css">
+    <style>
+        .loading {
+            position: fixed;
+            left: calc(50% - 30px);
+            top: calc(50% - 30px);
+            z-index: 101;
+        }
+
+        .content-right {
+            border: 1px solid #428bca;
+            border-radius: 5px;
+            margin: 5px 5px 0 5px;
+        }
+
+        .content {
+            padding: 0 !important;
+        }
+
+        .abn-tree {
+            padding: 3px 0 3px;
+            border: 1px solid #428bca;
+            border-radius: 5px;
+            margin: 5px 0 0 0;
+        }
+
+        .nav-pills > li > a {
+            border-radius: 0 !important;
+        }
+
+        .alert {
+            margin: 5px;
+        }
+
+        .toCenter {
+            text-align: center;
+        }
+
+        .iconContainer {
+            position: absolute;
+            right: 3px;
+        }
+
+        .infoIcon {
+            margin-left: 3px;
+        }
+
+        .regHighlight {
+            color: green;
+        }
+
+        .successReq, .failedReq{
+            color: white;
+            border-radius: 3px;
+            padding: 3px;
+        }
+
+        .successReq{
+            background: green;
+        }
+        .failedReq{
+            background: red;
+        }
+    </style>
+</head>
+
+<body ng-controller="AKEPViewController" style="padding:5px">
+<i ng-show="doing_async && !error" class="fa fa-cog fa-spin fa-3x fa-fw loading"></i>
+<div class="content col-sm-5" ng-show="!doing_async && !error">
+    <abn-tree tree-control="AKEPController" tree-data="AKEPData" on-select="AKEP_handler(branch)"></abn-tree>
+</div>
+<div class="content col-sm-7" ng-show="!doing_async && actBranch && !error">
+    <div class="content-right">
+        <div ng-show="actBranch.info" class="alert alert-info" ng-bind-html="actBranch.info"></div>
+        <div ng-show="actBranch.input" class="alert alert-warning" ng-bind-html="actBranch.input"></div>
+        <div ng-show="actBranch.error" class="alert alert-danger" ng-bind-html="actBranch.error"></div>
+        <div ng-show="actBranch.tasktext" class="alert alert-info" ng-bind-html="actBranch.tasktext"></div>
+        <div ng-show="actBranch.description" class="alert alert-success" ng-bind-html="actBranch.description"></div>
+        <div ng-show="actBranch.required" class="alert alert-danger">
+            <h3>Elvárás</h3>
+            <h4>{{actBranch.reqTypeText}}</h4>
+            <table>
+                <tr>
+                    <th>Elvárás</th>
+                    <th>Teljesített</th>
+                </tr>
+                <tr ng-repeat="req in actBranch.required">
+                    <td>{{req.requirement}}</td>
+                    <td ng-if="req.success"><span class="successReq">Sikeres</span></td>
+                    <td ng-if="!req.success"><span class="failedReq">Sikertelen</span></td>
+                </tr>
+            </table>
+        </div>
+        <div class="toCenter">
+            <button type="submit" class="btn btn-primary" ng-click="outputShowChange(actBranch)"
+                    ng-show="actBranch.output || actBranch.fulloutput">{{actBranch.buttonText}}
+            </button>
+        </div>
+
+        <div ng-if="!actBranch.cellType" ng-show="actBranch.output && !actBranch.fullOutputShow"
+             class="alert alert-danger"
+             ng-bind-html="actBranch.output"></div>
+
+        <div ng-if="actBranch.cellType" ng-show="actBranch.output && !actBranch.fullOutputShow"
+             class="alert alert-danger">
+            <h3>A hallgató munkájának releváns kimenete</h3>
+            <table>
+                <tr>
+                    <th ng-repeat="col in actBranch.header" track by $index">{{col}}</th>
+                </tr>
+                <tr ng-repeat="row in actBranch.output track by $index">
+                    <td ng-repeat="col in row track by $index">{{col}}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div ng-show="actBranch.fulloutput && actBranch.fullOutputShow" class="alert alert-danger"
+             ng-bind-html="actBranch.fulloutput"></div>
+    </div>
+</div>
+<div ng-show="error" class="alert alert-danger" ng-bind-html="errorContent"></div>
+</body>
+
+</html>
