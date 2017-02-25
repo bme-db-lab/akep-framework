@@ -165,7 +165,7 @@ class channel:
                                 raise subprocess.SubprocessError(error)
                             if CH_OUT_TASK_TYPE in ch:
                                 ch['out'] = self.chStringValidFn(re.sub('set feedback (on|off)', '',
-                                                                        re.sub('--.*\n', '', out[out.find(
+                                                                        re.sub('(?!--#)--.*\n', '', out[out.find(
                                                                             '<tasks>'):out.find(
                                                                             '</tasks>') + 8].replace('prompt', '')),
                                                                         flags=re.DOTALL))
