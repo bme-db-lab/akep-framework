@@ -153,7 +153,7 @@ class evaluate:
                 result, scoreItem, maxScoreItem = self.__solutionEvaluateAndPut(childSolution, task, parentOperator=(
                 parentOperator + '.' + operatorType) if parentOperator is not None else operatorType)
                 score = scoreFunc([score, scoreItem])  # if result else 0
-                maxScore = max(maxScore, maxScoreItem)
+                maxScore = scoreFunc([maxScore, maxScoreItem])
                 rs.setAttr(childSolution, 'result', 'true' if result else 'false')
                 rs.setAttr(childSolution, 'resultScore', self.__formatScore(scoreItem))
                 results.append(result)
