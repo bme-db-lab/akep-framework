@@ -10,5 +10,8 @@ util
 # AKÉP View external scripts
 ext
 
+# AKÉP View configuration
+config.js
+
 # source is in README.md
 README.html

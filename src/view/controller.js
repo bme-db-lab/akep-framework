@@ -64,7 +64,7 @@
                     $scope.error = true;
                     switch (response.status) {
                         case 401:
-                            $scope.errorContent = converter.makeHtml("A kért tartalomhoz nincs jogosultsága!\n\nLépjen be majd frissítsen!\n\n["+configGlobal.unauthorizedTOUrl+"]("+configGlobal.unauthorizedTOUrl+")");
+                            $scope.errorContent = converter.makeHtml("A kért tartalomhoz nincs jogosultsága!\n\nLépjen be majd frissítsen!\n\n[" + configGlobal.unauthorizedTOUrl + "](" + configGlobal.unauthorizedTOUrl + ")");
                             break;
                         case 404:
                             $scope.errorContent = "A kért tartalom nem elérhető!";
@@ -150,6 +150,15 @@
             return operands.length == 0 ? negation + $scope.createLabel(root) : '(' + operands.join(' ' + operator + ' ') + ')';
         };
 
+        $scope.createBonusMinusText = function (scoreArray) {
+            result = [];
+            scoreArray.forEach(function (score) {
+                var preTag = score.metricType === 'grade' ? 'Elégtelen osztályzat' : ((score.scoreType === 'minus' ? '- ' : '+ ') + score.value + ' ' + (score.metricType === 'percentage' ? '%' : 'pont'));
+                result.push('- `' + preTag + '` az ' + (score.extension === 'full' ? 'egész mérésre' : 'aktuális feladatra') + ', ha ' + score.description.charAt(0).toLowerCase() + score.description.slice(1) + '\n');
+            });
+            return result;
+        };
+
         $scope.createAKEPData = function (root, outputs, iMScParent) {
             var newChild = {};
             newChild.buttonText = 'Teljes kimenet';
@@ -167,15 +176,56 @@
             if (root.prop('tagName') === 'exercise' || root.prop('tagName') === 'task' || root.prop('tagName') == 'solution' && root.attr('evaluateMode') === undefined) {
                 newChild.info = ['###Információk'];
                 if (root.attr('exerciseID') !== undefined) {
+                    $scope.sancBon = {
+                        general: [],
+                        all: []
+                    };
+                    root.children('extra-scoring').children('score').each(function () {
+                        var score = $(this);
+                        var scoreObj = {
+                            scoreType: score.attr('scoreType'),
+                            value: score.attr('value'),
+                            metricType: score.attr('metricType'),
+                            extension: score.attr('extension')
+                        };
+                        scoreObj.description = score.children('description').text();
+                        if (score.children('apply-to').length === 0) {
+                            $scope.sancBon.general.push(scoreObj);
+                        } else {
+                            score.children('apply-to').each(function () {
+                                taskTo = $(this);
+                                if (taskTo.attr('n') === 'all') {
+                                    $scope.sancBon.all.push(scoreObj);
+                                } else {
+                                    if (!(taskTo.attr('n') in $scope.sancBon)) {
+                                        $scope.sancBon[taskTo.attr('n')] = [scoreObj];
+                                    } else {
+                                        $scope.sancBon[taskTo.attr('n')].push(scoreObj);
+                                    }
+                                }
+                            });
+                        }
+                    });
                     newChild.info.push('**Hallgató azonosító:** `' + root.attr('ownerID') + '`\n');
                     newChild.info.push('**Labor:** `' + root.attr('exerciseID').split('-')[1] + '`\n');
                     newChild.info.push('**Feladatsor:** `' + root.attr('exerciseID').split('-')[0] + '`\n');
+                    if ($scope.sancBon.general.length !== 0) {
+                        newChild.info.push('**Nem feladatfüggő szankciók vagy bónuszpontok:**\n');
+                        newChild.info = newChild.info.concat($scope.createBonusMinusText($scope.sancBon.general));
+                    }
                     $scope.rootAKEPData = newChild;
                 }
                 if (root.children('solution').length !== 0) {
                     newChild.info.push('**Szükséges feltétel:**\n\n\t' + $scope.createExpression(root) + '\n');
                 }
                 newChild.infoArray = newChild.info;
+
+                if ($scope.sancBon.all.length !== 0 && root.attr('exerciseID') === undefined || root.attr('n') in $scope.sancBon) {
+                    newChild.info.push('**Feladatfüggő szankciók vagy bónuszpontok:**\n');
+                    newChild.info = newChild.info.concat($scope.createBonusMinusText($scope.sancBon.all));
+                    newChild.info = newChild.info.concat($scope.createBonusMinusText(root.attr('n') && root.attr('n') in $scope.sancBon ? $scope.sancBon[root.attr('n')] : []));
+                }
+
                 newChild.info = converter.makeHtml(newChild.info.join('\n'));
             }
 
