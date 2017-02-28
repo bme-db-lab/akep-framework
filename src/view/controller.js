@@ -51,11 +51,11 @@
 
                     var maxBaseScore = $scope.rootAKEPData.score ? Number($scope.rootAKEPData.score.split('/')[1]) : 0;
                     var solvedScore = $scope.rootAKEPData.score ? Number($scope.rootAKEPData.score.split('/')[0]) : 0;
-                    var scoreMinToiMSc = Math.round((maxBaseScore - $scope.iMScBaseSum) * 0.85);
-                    if ($scope.solvediMSc > 0 && solvedScore >= scoreMinToiMSc) {
+                    var scoreMinToiMSc = Math.round(maxBaseScore * 0.85);
+                    if ($scope.solvediMSc > 0 && solvedScore - $scope.solvediMSc >= scoreMinToiMSc) {
                         $scope.rootAKEPData.info = converter.makeHtml(
                             $scope.rootAKEPData.infoArray.concat(
-                                '**iMSc pont:** `' + Math.min(10, (solvedScore - scoreMinToiMSc)) + ' pont`\n\nCsak abban az esetben helyes a fenti érték, ha a tesztek minden feladatra el lettek készítve és helyes az AKÉP pontozás.\n\nJogosult az iMSc pontra, mert\n- Megoldott iMSc feladat: `' + $scope.solvediMSc + ' pont`\n- Minimum szükséges pontszám: `' + scoreMinToiMSc + ' pont`').join('\n'));
+                                '**iMSc pont:** `' + Math.min(10, Math.round(solvedScore/maxBaseScore*100)-85) + ' pont`\n\nCsak abban az esetben helyes a fenti érték, ha a tesztek minden feladatra el lettek készítve és helyes az AKÉP pontozás.\n\nJogosult az iMSc pontra, mert\n- Megoldott iMSc feladat: `' + $scope.solvediMSc + ' pont`\n- Minimum szükséges pontszám: `' + scoreMinToiMSc + ' pont`').join('\n'));
                     }
                     $scope.doing_async = false;
                     $scope.AKEPController.select_branch($scope.AKEPData[0]);
@@ -238,9 +238,9 @@
             if (root.attr('resultScore') !== undefined && (root.attr('maxScore') !== undefined || root.attr('score') !== undefined)) {
                 var max = root.attr('maxScore') !== undefined ? root.attr('maxScore') : root.attr('score');
                 var min = root.attr('resultScore');
-                if (root.attr('comment') && root.attr('comment').indexOf('(i)') !== -1) {
-                    $scope.solvediMSc += Number(min);
-                    $scope.iMScBaseSum += Number(max);
+                if (root.attr('imscNormal')) {
+                    $scope.solvediMSc += Math.min(Number(root.attr('imscNormal')),Number(min));
+                    $scope.iMScBaseSum += Number(root.attr('imscNormal'));
                 }
                 newChild.score = min + '/' + max;
                 newChild.color = $scope.createResultColor(min, max);
