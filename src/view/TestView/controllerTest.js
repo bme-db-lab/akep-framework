@@ -105,7 +105,7 @@
             } else {
                 $scope.error = false;
                 $scope.success = true;
-                $scope.successContent = converter.makeHtml("Értékelés elkészült!\n\nMegtekinteti [itt](" + configGlobal.urlResultView + $scope.selectedPrevTest.timestamp + ")");
+                $scope.successContent = converter.makeHtml("Értékelés elkészült!\n\nMegtekintheti [itt](" + configGlobal.urlResultView + $scope.selectedPrevTest.timestamp + ")");
             }
         };
 
@@ -145,7 +145,7 @@
                     $scope.progressStyle = 'success';
                     $scope.success = true;
                     $scope.testStarted = false;
-                    $scope.successContent = converter.makeHtml("Értékelés elkészült!\n\nMegtekinteti [itt](" + configGlobal.urlResultView + timestamp + ")");
+                    $scope.successContent = converter.makeHtml("Értékelés elkészült!\n\nMegtekintheti [itt](" + configGlobal.urlResultView + timestamp + ")");
                     $scope.prevTests.unshift({
                         timestamp: timestamp,
                         viewDate: createListDate(timestamp)

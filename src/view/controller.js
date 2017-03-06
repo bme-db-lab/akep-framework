@@ -52,11 +52,15 @@
                     var maxBaseScore = $scope.rootAKEPData.score ? Number($scope.rootAKEPData.score.split('/')[1]) : 0;
                     var solvedScore = $scope.rootAKEPData.score ? Number($scope.rootAKEPData.score.split('/')[0]) : 0;
                     var scoreMinToiMSc = Math.round(maxBaseScore * 0.85);
+                    var iMScText = '**iMSc pont:** `';
                     if ($scope.solvediMSc > 0 && solvedScore - $scope.solvediMSc >= scoreMinToiMSc) {
-                        $scope.rootAKEPData.info = converter.makeHtml(
-                            $scope.rootAKEPData.infoArray.concat(
-                                '**iMSc pont:** `' + Math.min(10, Math.round(solvedScore/maxBaseScore*100)-85) + ' pont`\n\nCsak abban az esetben helyes a fenti érték, ha a tesztek minden feladatra el lettek készítve és helyes az AKÉP pontozás.\n\nJogosult az iMSc pontra, mert\n- Megoldott iMSc feladat: `' + $scope.solvediMSc + ' pont`\n- Minimum szükséges pontszám: `' + scoreMinToiMSc + ' pont`').join('\n'));
+                        iMScText += Math.min(10, Math.round(solvedScore / maxBaseScore * 100) - 85) + ' pont`\n\nCsak abban az esetben helyes a fenti érték, ha a tesztek minden feladatra el lettek készítve és helyes az AKÉP pontozás.\n\nJogosult az iMSc pontra, mert\n- Megoldott iMSc feladat: `' + $scope.solvediMSc + ' pont`\n- Minimum szükséges pontszám: `' + scoreMinToiMSc + ' pont`';
+                    } else {
+                        iMScText += '0 pont`, mert ' + ($scope.solvediMSc === 0 ? 'nem szerzett pontot (i)-vel jelölt feladatra.' : 'nem érte el az (i) jelű pontszámok nélkül a minimális ' + scoreMinToiMSc + ' pontot.');
                     }
+                    $scope.rootAKEPData.info = converter.makeHtml(
+                        $scope.rootAKEPData.infoArray.concat(iMScText).join('\n')
+                    );
                     $scope.doing_async = false;
                     $scope.AKEPController.select_branch($scope.AKEPData[0]);
                     $scope.AKEPController.expand_branch();
@@ -239,7 +243,7 @@
                 var max = root.attr('maxScore') !== undefined ? root.attr('maxScore') : root.attr('score');
                 var min = root.attr('resultScore');
                 if (root.attr('imscNormal')) {
-                    $scope.solvediMSc += Math.min(Number(root.attr('imscNormal')),Number(min));
+                    $scope.solvediMSc += Math.min(Number(root.attr('imscNormal')), Number(min));
                     $scope.iMScBaseSum += Number(root.attr('imscNormal'));
                 }
                 newChild.score = min + '/' + max;
