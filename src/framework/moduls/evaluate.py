@@ -162,9 +162,13 @@ class evaluate:
         finalResult = self.__multiOperations(operatorType, copy.copy(results))
         finalResult = not finalResult if rs.getAttrValue(element, SOL_NEGATION) is not None else finalResult
 
+        if finalResult:
+            score = float(rs.getAttrValue(element, SCORE_ATTR)) if rs.getAttrValue(element,SCORE_ATTR) is not None else score
+        else:
+            score = 0 if rs.getAttrValue(element,SCORE_ATTR) is not None else score
+
         # if container tag has score and finalResult True it will be result else the children function score return  
-        return (finalResult, (float(rs.getAttrValue(element, SCORE_ATTR)) if finalResult and rs.getAttrValue(element,
-                                                                                                             SCORE_ATTR) is not None else score),
+        return (finalResult, score,
                 float(rs.getAttrValue(element, SCORE_ATTR)) if rs.getAttrValue(element, SCORE_ATTR) else maxScore)
 
     def __multiOperations(self, opType, operands):
