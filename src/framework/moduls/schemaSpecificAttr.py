@@ -21,6 +21,7 @@ CH_OUT_TASK_TYPE = 'taskOutput'
 FROM_CAHNNEL = 'fromChannel'
 SCRIPT_INPUT_TYPE = ['inline', 'external', 'channelOutput']
 CHANNEL_NAME_ATTR = 'name'
+CHANNEL_WITH_SHELL = 'withShell'
 # to evaluate system
 SCORE_TYPE = ['bonus', 'minus']
 SOLUTION_CH_NAME = 'channelName'

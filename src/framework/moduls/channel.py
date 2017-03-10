@@ -128,8 +128,10 @@ class channel:
                                                                                          inputstream if 'taskInput' not in ch else (
                                                                                              concatInnerInputToTaskInp + taskInput)))
                         if entry == CH_ENTRY_ORDER[1]:
-                            proc = subprocess.Popen(arguments, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                                    stderr=subprocess.PIPE, universal_newlines=True)
+                            proc = subprocess.Popen(' '.join(arguments) if CHANNEL_WITH_SHELL in ch else arguments,
+                                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                                    stderr=subprocess.PIPE, universal_newlines=True,
+                                                    shell=CHANNEL_WITH_SHELL in ch)
                             if inputstream != '':
                                 proc.stdin.write(inputstream)
                                 proc.stdin.close()
@@ -154,8 +156,10 @@ class channel:
                                 raise subprocess.SubprocessError('Contionous channel is dead')
                         else:
                             # run subprocess
-                            proc = subprocess.Popen(arguments, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                                    stderr=subprocess.PIPE, universal_newlines=True)
+                            proc = subprocess.Popen(' '.join(arguments) if CHANNEL_WITH_SHELL in ch else arguments,
+                                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                                    stderr=subprocess.PIPE, universal_newlines=True,
+                                                    shell=CHANNEL_WITH_SHELL in ch)
                             self.openList.append({'proc': proc, 'chName': ch[CHANNEL_NAME_ATTR], 'entry': entry})
                             out, error = proc.communicate(input=(
                                 inputstream if 'taskInput' not in ch else (concatInnerInputToTaskInp + taskInput)),
