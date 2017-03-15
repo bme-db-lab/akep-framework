@@ -13,6 +13,8 @@ class resultContent:
         self.resultXMLRoot = copy.deepcopy(exerciseRoots[exerciseID])
         self.resultXMLRoot.set(EXERCISE_ID, exerciseID)
         self.resultXMLRoot.set(OWNER_ID, ownerID)
+        self.resultXMLRoot.set(OWNER_ID, ownerID)
+        self.resultXMLRoot.set('timeStamp', keyFn('timeStamp', command))
         self.keyFn = keyFn
         self.getUserFn = getUserFn
         self.exerciseRoots = exerciseRoots

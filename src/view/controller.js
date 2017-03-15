@@ -13,12 +13,24 @@
         $scope.solvediMSc = 0;
         $scope.iMScBaseSum = 0;
 
+        $scope.listDateOptions = {
+            weekday: "long", year: "numeric", month: "short",
+            day: "numeric", hour: "2-digit", minute: "2-digit"
+        };
+
         $scope.AKEP_handler = function (branch) {
             $scope.actBranch = branch;
         };
         $(window).on('hashchange', function () {
             $scope.loadContent();
         });
+
+        $scope.createListDate = function (timestamp) {
+            if (timestamp.length > 13) {
+                timestamp = timestamp.substring(0, 13);
+            }
+            return (new Date(parseInt(timestamp + (new Array(13 - timestamp.length + 1)).join('0')))).toLocaleDateString("hu", $scope.listDateOptions);
+        };
 
         $scope.loadContent = function () {
             $scope.error = false;
@@ -29,11 +41,14 @@
                 $scope.errorContent = "Határozza meg a kért tartalmat!";
                 return;
             }
-            akepResult = url.split('/');
+
+            var akepResult = url.split('/');
+            var previousResults = "";
             if (akepResult[0] === 'test') {
                 url = configGlobal.testDownload + akepResult[1]
             } else {
-                url = configGlobal.normalDownload + (akepResult.length === 3 ? akepResult[1] + '-' + akepResult[2] + '-' + akepResult[0] : akepResult.join('-'));
+                url = configGlobal.normalDownload + (akepResult.length === 3 ? akepResult[1] + '/' + akepResult[2] + '/' + akepResult[0] : akepResult.join('/'));
+                previousResults = akepResult.length === 3 ? akepResult[1] + '/' + akepResult[2] : akepResult.join('/');
             }
             $http({'method': 'get', 'url': url})
                 .then(function successCallback(response) {
@@ -49,6 +64,34 @@
                     }
                     $scope.AKEPData = [$scope.createAKEPData(root)];
 
+                    if (previousResults) {
+                        $http({
+                            'method': 'get',
+                            'url': configGlobal.allPreviousTests + previousResults,
+                            'headers': {'Content-Type': 'application/json'}
+                        }).then(function successCallback(response) {
+                            var previousResultsView = ['\n\n**Korábbi értékelések ehhez a hallgatóhoz:**'];
+                            response.data.forEach(function (prevResult) {
+                                var resultLink = '#AKEPView/';
+                                var resultText = '';
+                                if (akepResult[0] === prevResult) {
+                                    resultLink += akepResult[1] + '/' + akepResult[2];
+                                    resultText = 'Legfrissebb';
+                                } else {
+                                    resultLink += prevResult + '/' + (akepResult.length === 3 ?  akepResult[1] + '/' + akepResult[2] : akepResult.join('/'));
+                                    resultText = prevResult.replace(/-/g, '.').replace(/_/g, ':');
+                                }
+                                previousResultsView.push('<a href="' + resultLink + '">' + resultText + '</a>');
+                            });
+                            if (previousResultsView.length > 1) {
+                                $scope.rootAKEPData.infoArray = $scope.rootAKEPData.infoArray.concat(previousResultsView.join('\n- '));
+                                $scope.rootAKEPData.info = converter.makeHtml(
+                                    $scope.rootAKEPData.infoArray.join('\n')
+                                );
+                            }
+                        });
+                    }
+
                     var maxBaseScore = $scope.rootAKEPData.score ? Number($scope.rootAKEPData.score.split('/')[1]) : 0;
                     var solvedScore = $scope.rootAKEPData.score ? Number($scope.rootAKEPData.score.split('/')[0]) : 0;
                     var scoreMinToiMSc = Math.round(maxBaseScore * 0.85);
@@ -58,8 +101,9 @@
                     } else {
                         iMScText += '0 pont`, mert ' + ($scope.solvediMSc === 0 ? 'nem szerzett pontot (i)-vel jelölt feladatra.' : 'nem érte el az (i) jelű pontszámok nélkül a minimális ' + scoreMinToiMSc + ' pontot.');
                     }
+                    $scope.rootAKEPData.infoArray = $scope.rootAKEPData.infoArray.concat(iMScText);
                     $scope.rootAKEPData.info = converter.makeHtml(
-                        $scope.rootAKEPData.infoArray.concat(iMScText).join('\n')
+                        $scope.rootAKEPData.infoArray.join('\n')
                     );
                     $scope.doing_async = false;
                     $scope.AKEPController.select_branch($scope.AKEPData[0]);
@@ -210,6 +254,9 @@
                             });
                         }
                     });
+                    if (root.attr('timeStamp')) {
+                        newChild.info.push('**Értékelés időpontja:** `' + $scope.createListDate(root.attr('timeStamp')) + '`\n');
+                    }
                     newChild.info.push('**Hallgató azonosító:** `' + root.attr('ownerID') + '`\n');
                     newChild.info.push('**Labor:** `' + root.attr('exerciseID').split('-')[1] + '`\n');
                     newChild.info.push('**Feladatsor:** `' + root.attr('exerciseID').split('-')[0] + '`\n');
@@ -290,6 +337,9 @@
                             var position = cell[0].split(',');
                             var output = '';
                             var rowID = 0;
+                            if (wholeRowType) {
+                                position[1] = '*';
+                            }
                             if (position[0] !== '*' && position[1] !== '*') {
                                 output = (new RegExp(cell[1].replace(/\s+/g, '\\s*'))).test(actOutput[Number(position[0]) + 1].split($scope.delimiter)[Number(position[1])]) ? actOutput[Number(position[0]) + 1] : undefined;
                                 if (output) {
