@@ -47,6 +47,7 @@
 
         .alert {
             margin: 5px;
+            overflow-x: auto;
         }
 
         .toCenter {
@@ -133,6 +134,19 @@
 
         <div ng-show="actBranch.fulloutput && actBranch.fullOutputShow" class="alert alert-danger"
              ng-bind-html="actBranch.fulloutput"></div>
+
+        <div ng-show="actBranch.outputs" class="alert alert-warning" ng-repeat="output in actBranch.outputs">
+            <h3>{{output.title}}</h3>
+            <table ng-if="output.header.length != 0">
+                <tr>
+                    <th ng-repeat="col in output.header" track by $index">{{col}}</th>
+                </tr>
+                <tr ng-repeat="row in output.content track by $index">
+                    <td ng-repeat="col in row track by $index">{{col}}</td>
+                </tr>
+            </table>
+            <div ng-if="output.header.length == 0" ng-bind-html="output.content"/>
+        </div>
     </div>
 </div>
 <div ng-show="error" class="alert alert-danger" ng-bind-html="errorContent"></div>

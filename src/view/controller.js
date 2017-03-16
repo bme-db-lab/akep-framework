@@ -78,7 +78,7 @@
                                     resultLink += akepResult[1] + '/' + akepResult[2];
                                     resultText = 'Legfrissebb';
                                 } else {
-                                    resultLink += prevResult + '/' + (akepResult.length === 3 ?  akepResult[1] + '/' + akepResult[2] : akepResult.join('/'));
+                                    resultLink += prevResult + '/' + (akepResult.length === 3 ? akepResult[1] + '/' + akepResult[2] : akepResult.join('/'));
                                     resultText = prevResult.replace(/-/g, '.').replace(/_/g, ':');
                                 }
                                 previousResultsView.push('<a href="' + resultLink + '">' + resultText + '</a>');
@@ -157,7 +157,7 @@
             actBranch.fullOutputShow = !actBranch.fullOutputShow;
             actBranch.buttonText = !actBranch.fullOutputShow ? 'Teljes kimenet' : 'Releváns kimenet';
         };
-        $scope.getSeparator = function (reqType, reqText) {
+        $scope.getSeparator = function (reqType) {
             if (reqType.indexOf('contain') > -1) return ';';
             if (reqType === 'cellData') return '|||';
             if (reqType === 'ColumnsEqualParam') return $scope.delimiter;
@@ -207,7 +207,43 @@
             return result;
         };
 
-        $scope.createAKEPData = function (root, outputs, iMScParent) {
+        $scope.showStream = function (stream, title) {
+            var toConvert = title + '\n\t';
+            if ($(stream).children().length !== 0) {
+                toConvert += $(stream).html().replace(/\t/g, '').trim().replace(/\n/g, '\n\t');
+            } else {
+                toConvert += $(stream).text().replace(/\t/g, '').trim().replace(/\n/g, '\n\t');
+            }
+            return converter.makeHtml(toConvert);
+        };
+
+        $scope.parseCSV = function (text, delimiter) {
+            var rows = text.replace(/"/g,'').trim().split('\n');
+            var result = {
+                header: null,
+                content: []
+            };
+            var parseErrorException = {};
+            if (rows.length > 1) {
+                result.header = rows[0].split(delimiter);
+                rows.splice(0, 1);
+                try {
+                    rows.forEach(function (row) {
+                        var rRow = row.split(delimiter);
+                        if (rRow.length !== result.header.length) {
+                            throw parseErrorException;
+                        }
+                        result.content.push(rRow);
+                    });
+                    return result;
+                } catch (e) {
+                    if (e !== parseErrorException) throw e;
+                }
+            }
+            return null;
+        };
+
+        $scope.createAKEPData = function (root, outputs) {
             var newChild = {};
             newChild.buttonText = 'Teljes kimenet';
             newChild.label = $scope.createLabel(root);
@@ -216,9 +252,33 @@
 
             newChild.scoreType = root.attr('type');
 
+            if (root.children('output').length !== 0) {
+                var mustOutputs = [];
+                root.children('output').each(function () {
+                    var data = $scope.parseCSV($(this).text(), $scope.delimiter);
+                    if (data === null) {
+                        data = {
+                            header:[],
+                            content:$scope.showStream(this,'')
+                        };
+                    }
+                    data.title = 'Kimenet a ' + $(this).attr('channelName') + ' csatornán:';
+                    mustOutputs.push(data);
+                });
+                newChild.outputs = mustOutputs;
+            }
 
             if (root.attr('error') !== undefined) {
-                newChild.error = converter.makeHtml('###Hiba\nA hallgatói munka ellenőrzésekor hiba történt. A megfelelő személyeket emailben értesítettem.\n\n**Minimális információ a hiba okáról**\n\n\t' + root.attr('error'));
+                var errorText = "###Hiba\n";
+                switch (root.attr('error')) {
+                    case 'channelError':
+                        errorText += "A hallgató nem oldotta meg a feladatot."
+                        break;
+                    default:
+                        errorText += 'A hallgatói munka AKÉP ellenőrzésekor hiba történt.\n\nA hibákat a megfelelő személyek vizsgálják, és az aktuális mérésgurut informálják róla.\n\nEz lehet hosszabb folyamat is.\n\n**Minimális információ a hiba okáról**\n\n\t' + root.attr('error');
+                        break;
+                }
+                newChild.error = converter.makeHtml(errorText);
             }
 
             if (root.prop('tagName') === 'exercise' || root.prop('tagName') === 'task' || root.prop('tagName') == 'solution' && root.attr('evaluateMode') === undefined) {
@@ -298,13 +358,7 @@
             }
 
             if (root.children('inputstream').length !== 0) {
-                var toConvert = "###Bemenet a " + root.children('inputstream').attr('channelName') + " csatornából\n\t";
-                if ($(root.children('inputstream')).children().length !== 0) {
-                    toConvert += $(root.children('inputstream')).html().replace(/\t/g, '').trim().replace(/\n/g, '\n\t');
-                } else {
-                    toConvert += $(root.children('inputstream')).text().replace(/\t/g, '').trim().replace(/\n/g, '\n\t');
-                }
-                newChild.input = converter.makeHtml(toConvert);
+                newChild.input = $scope.showStream(root.children('inputstream'), "###Bemenet a " + root.children('inputstream').attr('channelName') + " csatornából");
             }
 
             if (root.children('tasktext').length !== 0) {
@@ -318,7 +372,7 @@
                 newChild.solution = newChild.score === undefined;
                 newChild.ok = root.attr('result') === 'true';
                 var actOutput = outputs.filter('[channelName="' + root.attr('channelName') + '"]').text().trim().toLowerCase().split('\n');
-                var separator = $scope.getSeparator(root.attr('evaluateMode'), root.text());
+                var separator = $scope.getSeparator(root.attr('evaluateMode'));
                 var actReq = separator ? root.text().trim().toLowerCase().split(separator) : [root.text().trim().toLowerCase()];
                 if (actReq[actReq.length - 1] === '') {
                     actReq.splice(actReq.length - 1, 1);
@@ -474,13 +528,13 @@
             }
 
             newChild.children = [];
-            tasks = root.children('task');
-            solutions = root.children('solution');
+            var tasks = root.children('task');
+            var solutions = root.children('solution');
             tasks.each(function () {
-                newChild.children.push($scope.createAKEPData($(this), undefined, root.attr('comment') && root.attr('comment').indexOf('(i)') !== -1))
+                newChild.children.push($scope.createAKEPData($(this), undefined))
             });
             solutions.each(function () {
-                newChild.children.push($scope.createAKEPData($(this), outputs ? outputs : root.children('output'), root.attr('comment') && root.attr('comment').indexOf('(i)') !== -1))
+                newChild.children.push($scope.createAKEPData($(this), outputs ? outputs : root.children('output')))
             });
             return newChild;
         };

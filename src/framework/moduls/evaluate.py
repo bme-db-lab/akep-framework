@@ -72,6 +72,10 @@ class evaluate:
         maxScore = 0
         # if task has task element
         for task in self.resultContent.getAll(element=taskElement, tag=TASKTAG, direct=True):
+            for requiredOutput in self.resultContent.getAll(element=task, tag=CH_OUT_TOTASK, direct=True):
+                taskOutput = self.getTaskOutputFn(rs.getAttrValue(requiredOutput, SOLUTION_CH_NAME),
+                                                  rs.getAttrValue(task, TASK_ELEMENT_ID), False)
+                rs.setText(requiredOutput, taskOutput[0] if taskOutput[1] else 'Error: ' + str(taskOutput[0]))
             scoreItem, maxScoreItem = self.__evaluateAll(task)
             score += scoreItem
             maxScore += maxScoreItem
@@ -151,7 +155,7 @@ class evaluate:
             if scoreType is None or element.tag == TASKTAG and rs.getAttrValue(childSolution,
                                                                                SOL_SCORE_TYPE) == scoreType:
                 result, scoreItem, maxScoreItem = self.__solutionEvaluateAndPut(childSolution, task, parentOperator=(
-                parentOperator + '.' + operatorType) if parentOperator is not None else operatorType)
+                    parentOperator + '.' + operatorType) if parentOperator is not None else operatorType)
                 score = scoreFunc([score, scoreItem])  # if result else 0
                 maxScore = scoreFunc([maxScore, maxScoreItem])
                 rs.setAttr(childSolution, 'result', 'true' if result else 'false')
@@ -163,9 +167,10 @@ class evaluate:
         finalResult = not finalResult if rs.getAttrValue(element, SOL_NEGATION) is not None else finalResult
 
         if finalResult:
-            score = float(rs.getAttrValue(element, SCORE_ATTR)) if rs.getAttrValue(element,SCORE_ATTR) is not None else score
+            score = float(rs.getAttrValue(element, SCORE_ATTR)) if rs.getAttrValue(element,
+                                                                                   SCORE_ATTR) is not None else score
         else:
-            score = 0 if rs.getAttrValue(element,SCORE_ATTR) is not None else score
+            score = 0 if rs.getAttrValue(element, SCORE_ATTR) is not None else score
 
         # if container tag has score and finalResult True it will be result else the children function score return  
         return (finalResult, score,
