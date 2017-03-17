@@ -218,7 +218,7 @@
         };
 
         $scope.parseCSV = function (text, delimiter) {
-            var rows = text.replace(/"/g,'').trim().split('\n');
+            var rows = text.replace(/"/g, '').trim().split('\n');
             var result = {
                 header: null,
                 content: []
@@ -243,6 +243,29 @@
             return null;
         };
 
+        $scope.showDependencies = function (dependencies, root) {
+            var result = [];
+            dependencies.each(function () {
+                var dependency = $(this);
+                var referenceAttr = dependency.attr('n') ? 'n' : 'id';
+                var targetName = '';
+                if (dependency.attr('error') !== 'reference'){
+                    var target = root.parents('exercise').find('[' + referenceAttr + '="' + (referenceAttr === 'id' ? dependency.attr('reference-id') : dependency.attr(referenceAttr)) + '"]');
+                    while (target.prop('tagName') !== 'exercise') {
+                        targetName = $scope.createLabel(target) + (targetName ? '/' + targetName : '');
+                        target = target.parent();
+                    }
+                }
+                result.push({
+                    reference: targetName ? targetName : 'A hivatkozott elem nem található',
+                    success: !dependency.attr('error'),
+                    failedText: dependency.attr('error') === 'reference' ? 'Hivatkozási hiba' : 'Az elem pontszáma kevés',
+                    minScore: dependency.attr('minScore')
+                })
+            });
+            return result;
+        };
+
         $scope.createAKEPData = function (root, outputs) {
             var newChild = {};
             newChild.buttonText = 'Teljes kimenet';
@@ -258,8 +281,8 @@
                     var data = $scope.parseCSV($(this).text(), $scope.delimiter);
                     if (data === null) {
                         data = {
-                            header:[],
-                            content:$scope.showStream(this,'')
+                            header: [],
+                            content: $scope.showStream(this, '')
                         };
                     }
                     data.title = 'Kimenet a ' + $(this).attr('channelName') + ' csatornán:';
@@ -267,6 +290,8 @@
                 });
                 newChild.outputs = mustOutputs;
             }
+
+            newChild.dependencies = $scope.showDependencies(root.children('dependency'), root);
 
             if (root.attr('error') !== undefined) {
                 var errorText = "###Hiba\n";

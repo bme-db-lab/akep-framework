@@ -77,6 +77,7 @@ class evaluate:
                                                   rs.getAttrValue(task, TASK_ELEMENT_ID), False)
                 rs.setText(requiredOutput, taskOutput[0] if taskOutput[1] else 'Error: ' + str(taskOutput[0]))
             scoreItem, maxScoreItem = self.__evaluateAll(task)
+            scoreItem = self.__dependencyCheck(task, scoreItem=scoreItem)[1]
             score += scoreItem
             maxScore += maxScoreItem
             rs.setAttr(task, 'resultScore', self.__formatScore(scoreItem))
@@ -89,6 +90,27 @@ class evaluate:
         Format score style to two decimal point
         """
         return formatText.format(round(score, 2))
+
+    def __dependencyCheck(self, element, result=None, scoreItem=None):
+        dependencies = self.resultContent.getAll(element=element, tag='dependency', direct=True)
+        for dependency in dependencies:
+            if rs.getAttrValue(dependency, TASK_ELEMENT_ID) is not None:
+                depTarget = self.resultContent.get(tag=TASKTAG, attrName=TASK_ELEMENT_ID,
+                                                   attrValue=rs.getAttrValue(dependency, TASK_ELEMENT_ID))
+            else:
+                depTarget = self.resultContent.get(attrName=REFERENCE_TARGET_ID,
+                                                   attrValue=rs.getAttrValue(dependency,
+                                                                             REFERENCE_ID))
+
+            depScore = 0 if depTarget is None else rs.getAttrValue(depTarget, 'resultScore')
+            depConditionFail = depScore is None or float(depScore) < float(
+                rs.getAttrValue(dependency, 'minScore'))
+
+            if depTarget is None or depConditionFail:
+                scoreItem = 0
+                result = False
+                rs.setAttr(dependency, TO_ELEMENT_ERROR_ATTR, 'condition' if depConditionFail else 'reference')
+        return (result, scoreItem)
 
     def __solutionEvaluateAndPut(self, element, task, scoreType=None, parentOperator=None):
         """
@@ -156,6 +178,9 @@ class evaluate:
                                                                                SOL_SCORE_TYPE) == scoreType:
                 result, scoreItem, maxScoreItem = self.__solutionEvaluateAndPut(childSolution, task, parentOperator=(
                     parentOperator + '.' + operatorType) if parentOperator is not None else operatorType)
+
+                result, scoreItem = self.__dependencyCheck(childSolution, result, scoreItem)
+
                 score = scoreFunc([score, scoreItem])  # if result else 0
                 maxScore = scoreFunc([maxScore, maxScoreItem])
                 rs.setAttr(childSolution, 'result', 'true' if result else 'false')
@@ -172,7 +197,7 @@ class evaluate:
         else:
             score = 0 if rs.getAttrValue(element, SCORE_ATTR) is not None else score
 
-        # if container tag has score and finalResult True it will be result else the children function score return  
+        # if container tag has score and finalResult True it will be result else the children function score return
         return (finalResult, score,
                 float(rs.getAttrValue(element, SCORE_ATTR)) if rs.getAttrValue(element, SCORE_ATTR) else maxScore)
 

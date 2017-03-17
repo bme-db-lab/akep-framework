@@ -89,6 +89,22 @@
 </div>
 <div class="content col-sm-7" ng-show="!doing_async && actBranch && !error">
     <div class="content-right">
+        <div ng-if="actBranch.dependencies.length != 0" class="alert alert-info">
+            <h3>Függőségek:</h3>
+            <table>
+                <tr>
+                    <th>Elem</th>
+                    <th>Minimális pontszám</th>
+                    <th>Teljesült</th>
+                </tr>
+                <tr ng-repeat="row in actBranch.dependencies track by $index">
+                    <td>{{row.reference}}</td>
+                    <td>{{row.minScore}}</td>
+                    <td ng-if="row.success"><span class="successReq">Sikeres</span></td>
+                    <td ng-if="!row.success"><span class="failedReq">row.failedText</span></td>
+                </tr>
+            </table>
+        </div>
         <div ng-show="actBranch.info" class="alert alert-info" ng-bind-html="actBranch.info"></div>
         <div ng-show="actBranch.input" class="alert alert-warning" ng-bind-html="actBranch.input"></div>
         <div ng-show="actBranch.error" class="alert alert-danger" ng-bind-html="actBranch.error"></div>
@@ -145,7 +161,7 @@
                     <td ng-repeat="col in row track by $index">{{col}}</td>
                 </tr>
             </table>
-            <div ng-if="output.header.length == 0" ng-bind-html="output.content"/>
+            <div ng-if="output.header.length == 0" ng-bind-html="output.content"></div>
         </div>
     </div>
 </div>
