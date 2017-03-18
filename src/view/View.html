@@ -101,7 +101,7 @@
                     <td>{{row.reference}}</td>
                     <td>{{row.minScore}}</td>
                     <td ng-if="row.success"><span class="successReq">Sikeres</span></td>
-                    <td ng-if="!row.success"><span class="failedReq">row.failedText</span></td>
+                    <td ng-if="!row.success"><span class="failedReq">{{row.failedText}}</span></td>
                 </tr>
             </table>
         </div>

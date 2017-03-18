@@ -66,6 +66,7 @@
 
 <xs:complexType name="solutionType" mixed="true">
 	<xs:sequence>
+		<xs:element name="dependency" type="dependencyType" maxOccurs="unbounded" minOccurs="0"/>
 		<xs:element name="solution" type="solutionType" maxOccurs="unbounded" minOccurs="0"/>
 	</xs:sequence>	
 	<xs:attribute name="score" type="xs:decimal"/>
@@ -83,6 +84,8 @@
 <xs:complexType name="taskType">
 	<xs:sequence>
 		<xs:any minOccurs="0" namespace="##any" processContents="skip"/>
+		<xs:element name="output" type="chOutputType" maxOccurs="unbounded" minOccurs="0"/>
+		<xs:element name="dependency" type="dependencyType" maxOccurs="unbounded" minOccurs="0"/>
 		<xs:element name="tasktext" type="xs:string" maxOccurs="1" minOccurs="0"/>
 		<xs:element name="description" type="xs:string" maxOccurs="1" minOccurs="0"/>
 		<xs:element name="task" type="taskType" maxOccurs="unbounded" minOccurs="0"/>
@@ -131,6 +134,16 @@
 		<xs:any minOccurs="0"  maxOccurs="unbounded" namespace="##any" processContents="skip"/>
 	</xs:sequence>
 	<xs:attribute name="channelName" type="xs:string" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="chOutputType">
+	<xs:attribute name="channelName" type="xs:string" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="dependencyType">
+	<xs:attribute name="minScore" type="xs:string"/>
+	<xs:attribute name="n" type="xs:string"/>
+	<xs:attribute name="reference-id" type="xs:string"/>
 </xs:complexType>
 
 <xs:simpleType name="scoreType">

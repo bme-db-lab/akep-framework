@@ -103,8 +103,9 @@ class evaluate:
                                                                              REFERENCE_ID))
 
             depScore = 0 if depTarget is None else rs.getAttrValue(depTarget, 'resultScore')
-            depConditionFail = depScore is None or float(depScore) < float(
-                rs.getAttrValue(dependency, 'minScore'))
+            minScore = rs.getAttrValue(dependency, 'minScore')
+            depConditionFail = depScore is None or minScore is not None and float(depScore) < float(
+                minScore) or minScore is None and float(depScore) == 0
 
             if depTarget is None or depConditionFail:
                 scoreItem = 0
