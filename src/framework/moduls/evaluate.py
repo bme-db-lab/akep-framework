@@ -109,7 +109,7 @@ class evaluate:
             if depTarget is None or depConditionFail:
                 scoreItem = 0
                 result = False
-                rs.setAttr(dependency, TO_ELEMENT_ERROR_ATTR, 'condition' if depConditionFail else 'reference')
+                rs.setAttr(dependency, TO_ELEMENT_ERROR_ATTR, 'reference' if depTarget is None else 'condition')
         return (result, scoreItem)
 
     def __solutionEvaluateAndPut(self, element, task, scoreType=None, parentOperator=None):
