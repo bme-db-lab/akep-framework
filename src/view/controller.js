@@ -201,7 +201,10 @@
         $scope.createBonusMinusText = function (scoreArray) {
             result = [];
             scoreArray.forEach(function (score) {
-                var preTag = score.metricType === 'grade' ? 'Elégtelen osztályzat' : ((score.scoreType === 'minus' ? '- ' : '+ ') + score.value + ' ' + (score.metricType === 'percentage' ? '%' : 'pont'));
+                var preTag = score.value === 'fail'
+                    ? 'Elégtelen osztályzat'
+                    : ((score.scoreType === 'minus' ? '- ' : '+ ') + score.value + ' '
+                       + (score.metricType === 'percentage' ? '%' : ( score.metricType === 'grade' ? 'jegy' : 'pont')));
                 result.push('- `' + preTag + '` az ' + (score.extension === 'full' ? 'egész mérésre' : 'aktuális feladatra') + ', ha ' + score.description.charAt(0).toLowerCase() + score.description.slice(1) + '\n');
             });
             return result;
