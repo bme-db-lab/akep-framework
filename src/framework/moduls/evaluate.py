@@ -74,7 +74,9 @@ class evaluate:
         for task in self.resultContent.getAll(element=taskElement, tag=TASKTAG, direct=True):
             for requiredOutput in self.resultContent.getAll(element=task, tag=CH_OUT_TOTASK, direct=True):
                 taskOutput = self.getTaskOutputFn(rs.getAttrValue(requiredOutput, SOLUTION_CH_NAME),
-                                                  rs.getAttrValue(task, TASK_ELEMENT_ID), False)
+                                                  rs.getAttrValue(task, TASK_ELEMENT_ID),
+                                                  False if rs.getAttrValue(requiredOutput,
+                                                                           SOL_SHOULD_ERROR) is None else True)
                 rs.setText(requiredOutput, taskOutput[0] if taskOutput[1] else 'Error: ' + str(taskOutput[0]))
             scoreItem, maxScoreItem = self.__evaluateAll(task)
             scoreItem = self.__dependencyCheck(task, scoreItem=scoreItem)[1]
@@ -126,15 +128,23 @@ class evaluate:
             solID = ((parentOperator + '.') if parentOperator is not None else '') + str(
                 element.getparent().index(element))
             requiredSolution = re.sub('\s+', ' ', element.text).strip().lower()
+            fromErrorStream = rs.getAttrValue(element, SOL_SHOULD_ERROR)
             # get a tuple: channel output or error text, output is failed to the actual task?
             taskOutput = self.getTaskOutputFn(rs.getAttrValue(element, SOLUTION_CH_NAME),
                                               rs.getAttrValue(task, TASK_ELEMENT_ID),
-                                              True if rs.getAttrValue(element, SOL_SHOULD_ERROR) is not None else False)
+                                              True if fromErrorStream is not None else False)
             # if parent task does not contain the output from channel which is referenced by actual solution
-            if self.resultContent.get(element=task, tag=CH_OUT_TOTASK, attrName=SOLUTION_CH_NAME,
-                                      attrValue=element.get(SOLUTION_CH_NAME), direct=True) is None:
-                taskOutputElement = rs.createElement(CH_OUT_TOTASK,
-                                                     {SOLUTION_CH_NAME: rs.getAttrValue(element, SOLUTION_CH_NAME)})
+            taskOutputsToChannel = self.resultContent.getAll(element=task, tag=CH_OUT_TOTASK, attrName=SOLUTION_CH_NAME,
+                                                             attrValue=element.get(SOLUTION_CH_NAME), direct=True)
+
+            if len(taskOutputsToChannel) == 0 or len(taskOutputsToChannel) == 1 and rs.getAttrValue(
+                    taskOutputsToChannel[0], SOL_SHOULD_ERROR) != fromErrorStream:
+                newAttr = {SOLUTION_CH_NAME: rs.getAttrValue(element, SOLUTION_CH_NAME)}
+
+                if fromErrorStream is not None:
+                    newAttr[SOL_SHOULD_ERROR] = ''
+
+                taskOutputElement = rs.createElement(CH_OUT_TOTASK, newAttr)
                 rs.setText(taskOutputElement, taskOutput[0] if taskOutput[1] else 'Error: ' + str(taskOutput[0]))
                 rs.appendTo(taskOutputElement, task)
             score = 0 if rs.getAttrValue(element, SCORE_ATTR) is None else float(rs.getAttrValue(element, SCORE_ATTR))

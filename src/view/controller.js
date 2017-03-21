@@ -288,7 +288,7 @@
                             content: $scope.showStream(this, '')
                         };
                     }
-                    data.title = 'Kimenet a ' + $(this).attr('channelName') + ' csatornán:';
+                    data.title = 'Kimenet a ' + $(this).attr('channelName') + ' csatornán '+($(this).attr('errorCheck') === '' ? '(standard error stream-jén)' : '')+':';
                     mustOutputs.push(data);
                 });
                 newChild.outputs = mustOutputs;
@@ -300,7 +300,7 @@
                 var errorText = "###Hiba\n";
                 switch (root.attr('error')) {
                     case 'channelError':
-                        errorText += "A hallgató nem oldotta meg a feladatot."
+                        errorText += "A hallgató nem oldotta meg a feladatot.";
                         break;
                     default:
                         errorText += 'A hallgatói munka AKÉP ellenőrzésekor hiba történt.\n\nA hibákat a megfelelő személyek vizsgálják, és az aktuális mérésgurut informálják róla.\n\nEz lehet hosszabb folyamat is.\n\n**Minimális információ a hiba okáról**\n\n\t' + root.attr('error');
@@ -399,7 +399,7 @@
             if (root.attr('evaluateMode') !== undefined) {
                 newChild.solution = newChild.score === undefined;
                 newChild.ok = root.attr('result') === 'true';
-                var actOutput = outputs.filter('[channelName="' + root.attr('channelName') + '"]').text().trim().toLowerCase().split('\n');
+                var actOutput = outputs.filter('[channelName="' + root.attr('channelName') + '"]'+(root.attr('errorCheck') === '' ? '[errorCheck=""]' :'[errorCheck!=""]')).text().trim().toLowerCase().split('\n');
                 var separator = $scope.getSeparator(root.attr('evaluateMode'));
                 var actReq = separator ? root.text().trim().toLowerCase().split(separator) : [root.text().trim().toLowerCase()];
                 if (actReq[actReq.length - 1] === '') {
