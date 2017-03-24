@@ -491,9 +491,11 @@
                     }
 
                     var newActOutput = [];
+                    var rawOutput = ['sorszám'+$scope.delimiter+actOutput[0]];
                     actOutput.forEach(function (row, id) {
                         if (id != 0) {
                             newActOutput.push([id].concat(row.split($scope.delimiter)));
+                            rawOutput.push(id+$scope.delimiter+row);
                         }
                     });
                     if (newActOutput.length !== 0) {
@@ -552,7 +554,8 @@
                     newChild.output = '<h3>Hallgató munkájának releváns kimenete</h3>' + relevantActOutput;
                 }
 
-                newChild.fulloutput = converter.makeHtml("###Hallgató munkájának raw kimenete\n\t" + actOutput.join('\n\t'));
+                newChild.fulloutput = converter.makeHtml("###Hallgató munkájának raw kimenete\n\t" + (root.attr('evaluateMode') === 'cellData' ? rawOutput : actOutput).join('\n\t'));
+
             }
 
             newChild.children = [];
