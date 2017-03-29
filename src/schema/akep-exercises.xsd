@@ -138,6 +138,7 @@
 
 <xs:complexType name="chOutputType">
 	<xs:attribute name="channelName" type="xs:string" use="required"/>
+	<xs:attribute name="style" type="xs:string"/>
 </xs:complexType>
 
 <xs:complexType name="dependencyType">
