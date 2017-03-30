@@ -15,6 +15,8 @@
     <script src="ext/showdown/showdown.min.js"></script>
     <script src="config.js"></script>
     <script src="controller.js"></script>
+    <link rel="stylesheet" href="solarized-light.css">
+    <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.10.0/highlight.min.js"></script>
     <link rel="stylesheet" href="ext/foundation/foundation.min.css">
     <style>
         .loading {
@@ -67,17 +69,24 @@
             color: green;
         }
 
-        .successReq, .failedReq{
+        .successReq, .failedReq {
             color: white;
             border-radius: 3px;
             padding: 3px;
         }
 
-        .successReq{
+        .successReq {
             background: green;
         }
-        .failedReq{
+
+        .failedReq {
             background: red;
+        }
+
+        pre.my {
+            border: 0px !important;
+            word-break: normal !important;
+            background-color: transparent !important;
         }
     </style>
 </head>
@@ -140,7 +149,8 @@
             <h3>A hallgató munkájának releváns kimenete</h3>
             <table>
                 <tr>
-                    <th ng-repeat="col in actBranch.header" track by $index">{{col}}</th>
+                    <th ng-repeat="col in actBranch.header" track by $index
+                    ">{{col}}</th>
                 </tr>
                 <tr ng-repeat="row in actBranch.output track by $index">
                     <td ng-repeat="col in row track by $index">{{col}}</td>
@@ -155,17 +165,19 @@
             <h3>{{output.title}}</h3>
             <table ng-if="output.header.length != 0">
                 <tr>
-                    <th ng-repeat="col in output.header" track by $index">{{col}}</th>
+                    <th ng-repeat="col in output.header" track by $index
+                    ">{{col}}</th>
                 </tr>
                 <tr ng-repeat="row in output.content track by $index">
                     <td ng-repeat="col in row track by $index">{{col}}</td>
                 </tr>
             </table>
-            <div ng-if="output.header.length == 0" ng-bind-html="output.content"></div>
+            <pre class="my" ng-if="output.header.length == 0">
+                <code class="{{output.style}}">{{output.content}}</code>
+            </pre>
         </div>
     </div>
 </div>
 <div ng-show="error" class="alert alert-danger" ng-bind-html="errorContent"></div>
 </body>
-
 </html>

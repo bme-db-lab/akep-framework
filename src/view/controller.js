@@ -20,6 +20,21 @@
 
         $scope.AKEP_handler = function (branch) {
             $scope.actBranch = branch;
+            if ('outputs' in $scope.actBranch)
+                $scope.actBranch.outputs.forEach(function (output) {
+                    if (output.style) {
+                        var temp = [];
+                        output.content.split('\n').forEach(function (row) {
+                            temp.push(row.replace(/\t\t?/, ''))
+                        });
+                        output.content = temp.join('\n');
+                    }
+                });
+            $(document).ready(function () {
+                $('pre.my code').each(function (i, block) {
+                    hljs.highlightBlock(block);
+                });
+            });
         };
         $(window).on('hashchange', function () {
             $scope.loadContent();
@@ -128,7 +143,7 @@
                 return element.attr(e) !== undefined;
             });
             if (selected === undefined) {
-                return $scope.createLabel(element.parent()) + '.' + element.attr('operator');
+                return $scope.createLabel(element.parent()) + '.' + (element.attr('operator') ? element.attr('operator') : 'or');
             }
             return element.attr(selected);
         };
@@ -204,20 +219,23 @@
                 var preTag = score.value === 'fail'
                     ? 'Elégtelen osztályzat'
                     : ((score.scoreType === 'minus' ? '- ' : '+ ') + score.value + ' '
-                       + (score.metricType === 'percentage' ? '%' : ( score.metricType === 'grade' ? 'jegy' : 'pont')));
+                    + (score.metricType === 'percentage' ? '%' : ( score.metricType === 'grade' ? 'jegy' : 'pont')));
                 result.push('- `' + preTag + '` az ' + (score.extension === 'full' ? 'egész mérésre' : 'aktuális feladatra') + ', ha ' + score.description.charAt(0).toLowerCase() + score.description.slice(1) + '\n');
             });
             return result;
         };
 
-        $scope.showStream = function (stream, title) {
+        $scope.showStream = function (stream, title, style) {
             var toConvert = title + '\n\t';
+            if (style) {
+                return toConvert += $(stream).text();
+            }
             if ($(stream).children().length !== 0) {
                 toConvert += $(stream).html().replace(/\t/g, '').trim().replace(/\n/g, '\n\t');
             } else {
                 toConvert += $(stream).text().replace(/\t/g, '').trim().replace(/\n/g, '\n\t');
             }
-            return converter.makeHtml(toConvert);
+            return toConvert;
         };
 
         $scope.parseCSV = function (text, delimiter) {
@@ -252,7 +270,7 @@
                 var dependency = $(this);
                 var referenceAttr = dependency.attr('n') ? 'n' : 'id';
                 var targetName = '';
-                if (dependency.attr('error') !== 'reference'){
+                if (dependency.attr('error') !== 'reference') {
                     var target = root.parents('exercise').find('[' + referenceAttr + '="' + (referenceAttr === 'id' ? dependency.attr('reference-id') : dependency.attr(referenceAttr)) + '"]');
                     while (target.prop('tagName') !== 'exercise') {
                         targetName = $scope.createLabel(target) + (targetName ? '/' + targetName : '');
@@ -281,14 +299,15 @@
             if (root.children('output').length !== 0) {
                 var mustOutputs = [];
                 root.children('output').each(function () {
-                    var data = $scope.parseCSV($(this).text(), $scope.delimiter);
+                    var data = $(this).attr('style') !== undefined ? null : $scope.parseCSV($(this).text(), $scope.delimiter);
                     if (data === null) {
                         data = {
                             header: [],
-                            content: $scope.showStream(this, '')
+                            content: $scope.showStream(this, '', $(this).attr('style')),
+                            style: $(this).attr('style')
                         };
                     }
-                    data.title = 'Kimenet a ' + $(this).attr('channelName') + ' csatornán '+($(this).attr('errorCheck') === '' ? '(standard error stream-jén)' : '')+':';
+                    data.title = 'Kimenet a ' + $(this).attr('channelName') + ' csatornán ' + ($(this).attr('errorCheck') === '' ? '(standard error stream-jén)' : '') + ':';
                     mustOutputs.push(data);
                 });
                 newChild.outputs = mustOutputs;
@@ -386,7 +405,7 @@
             }
 
             if (root.children('inputstream').length !== 0) {
-                newChild.input = $scope.showStream(root.children('inputstream'), "###Bemenet a " + root.children('inputstream').attr('channelName') + " csatornából");
+                newChild.input = converter.makeHtml($scope.showStream(root.children('inputstream'), "###Bemenet a " + root.children('inputstream').attr('channelName') + " csatornából"));
             }
 
             if (root.children('tasktext').length !== 0) {
@@ -399,7 +418,7 @@
             if (root.attr('evaluateMode') !== undefined) {
                 newChild.solution = newChild.score === undefined;
                 newChild.ok = root.attr('result') === 'true';
-                var actOutput = outputs.filter('[channelName="' + root.attr('channelName') + '"]'+(root.attr('errorCheck') === '' ? '[errorCheck=""]' :'[errorCheck!=""]')).text().trim().toLowerCase().split('\n');
+                var actOutput = outputs.filter('[channelName="' + root.attr('channelName') + '"]' + (root.attr('errorCheck') === '' ? '[errorCheck=""]' : '[errorCheck!=""]')).text().trim().toLowerCase().split('\n');
                 var separator = $scope.getSeparator(root.attr('evaluateMode'));
                 var actReq = separator ? root.text().trim().toLowerCase().split(separator) : [root.text().trim().toLowerCase()];
                 if (actReq[actReq.length - 1] === '') {
@@ -491,11 +510,11 @@
                     }
 
                     var newActOutput = [];
-                    var rawOutput = ['sorszám'+$scope.delimiter+actOutput[0]];
+                    var rawOutput = ['sorszám' + $scope.delimiter + actOutput[0]];
                     actOutput.forEach(function (row, id) {
                         if (id != 0) {
                             newActOutput.push([id].concat(row.split($scope.delimiter)));
-                            rawOutput.push(id+$scope.delimiter+row);
+                            rawOutput.push(id + $scope.delimiter + row);
                         }
                     });
                     if (newActOutput.length !== 0) {
