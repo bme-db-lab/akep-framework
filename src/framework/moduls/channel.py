@@ -232,6 +232,7 @@ class channel:
                                      range(lastRightIndex + 2, len(ch['taskInput']))])
                                 again = True
                         else:
+                            self.logger.error(str(err))
                             ch['errorType'] = 'Call- or subprocess error'
                             ch['stop'] = str(time.time())
                             raise AKEPException('Error in script: ' + ch[CHANNEL_NAME_ATTR])

@@ -49,7 +49,60 @@ class evaluate:
         # result score and max score put the root element
         self.resultContent.resultXMLRoot.set('resultScore', self.__formatScore(score))
         self.resultContent.resultXMLRoot.set('maxScore', self.__formatScore(maxScore))
+
+        if self.resultContent.resultXMLRoot.find('scoreSpecial') is not None:
+            self.scoreSpecialEvaluator(self.resultContent.resultXMLRoot.find('scoreSpecial'))
+            score = float(self.resultContent.resultXMLRoot.get('resultScore'))
+            maxScore = float(self.resultContent.resultXMLRoot.get('maxScore'))
+
         self.scoreToAnalyse = self.__formatScore(score / maxScore * 100)
+
+    def repleaceAllSignFromText(self, text, valueStoreObject, sign='@'):
+        for key, value in valueStoreObject.items():
+            text = text.replace(sign + key, str(value))
+        return text
+
+    def scoreSpecialEvaluator(self, scoreSpecial):
+        if scoreSpecial is None:
+            return
+        try:
+            scoreAttrs = {
+                'this': scoreSpecial.getparent().get('resultScore'),
+                'all': sum(float(resultScore) for resultScore in self.resultContent.resultXMLRoot.xpath(
+                    'task/@resultScore'))
+            }
+            for scoreAttr in scoreSpecial.findall('scoreAttr'):
+                attrToSum = '/' + ('@resultScore' if scoreAttr.get('attrName') is None else scoreAttr.get('attrName'))
+                scoreAttrs[scoreAttr.get('name')] = sum(
+                    float(resultScore) for resultScore in self.resultContent.resultXMLRoot.xpath(
+                        scoreAttr.get('xpath') + attrToSum))
+
+            for scoreCondition in scoreSpecial.findall('scoreCondition'):
+                scoreCondition.text = self.repleaceAllSignFromText(scoreCondition.text, scoreAttrs)
+                if not eval(re.sub('\s+', ' ', scoreCondition.text).strip()):
+                    scoreCondition.set('result', 'false')
+                    return
+
+            for scoreResult in scoreSpecial.findall('scoreResult'):
+                score = eval(re.sub('\s+', ' ', self.repleaceAllSignFromText(scoreResult.text, scoreAttrs)).strip())
+                addTo = scoreResult.get('addTo')
+                if scoreResult.get('type') is not None and addTo is None and scoreSpecial.getparent().tag != 'solution':
+                    oldScore = scoreSpecial.getparent().get('resultScore')
+                    score = ((-1) * score) if scoreResult.get('type') == 'minus' else score
+                    scoreSpecial.getparent().set('resultScore', self.__formatScore(
+                        (float(oldScore) + score) if oldScore is not None else score))
+                elif addTo is not None:
+                    oldScore = scoreSpecial.getparent().get(addTo)
+                    scoreSpecial.getparent().set(addTo, self.__formatScore(
+                        (float(oldScore) + score) if oldScore is not None else score))
+                else:
+                    for scoreType in ['resultScore', 'maxScore']:
+                        oldScore = scoreSpecial.getparent().get(scoreType)
+                        scoreSpecial.getparent().set(scoreType, self.__formatScore(
+                            (float(oldScore) + score) if oldScore is not None else score))
+        except Exception as err:
+            self.logger.exception('scoreSpecialEvaluator error')
+            scoreSpecial.set('error', str(err))
 
     def __evaluateAll(self, taskElement):
         """
@@ -84,7 +137,8 @@ class evaluate:
             maxScore += maxScoreItem
             rs.setAttr(task, 'resultScore', self.__formatScore(scoreItem))
             rs.setAttr(task, 'maxScore', self.__formatScore(maxScoreItem))
-
+            if task.find('scoreSpecial') is not None:
+                self.scoreSpecialEvaluator(task.find('scoreSpecial'))
         return score, maxScore
 
     def __formatScore(self, score, formatText='{0:.2f}'):
@@ -196,6 +250,8 @@ class evaluate:
                 maxScore = scoreFunc([maxScore, maxScoreItem])
                 rs.setAttr(childSolution, 'result', 'true' if result else 'false')
                 rs.setAttr(childSolution, 'resultScore', self.__formatScore(scoreItem))
+                if childSolution.find('scoreSpecial') is not None:
+                    self.scoreSpecialEvaluator(childSolution.find('scoreSpecial'))
                 results.append(result)
         # default solution has or relationship with neighbour solutions
         # final result is calculated with __multiOperations
