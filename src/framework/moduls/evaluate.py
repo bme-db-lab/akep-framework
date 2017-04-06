@@ -239,8 +239,7 @@ class evaluate:
         scoreFunc = sum if operatorType == 'and' else max
         for childSolution in self.resultContent.getAll(element=element, tag=SOLUTION_TAG, direct=True):
             # if element has children solition elements
-            if scoreType is None or element.tag == TASKTAG and rs.getAttrValue(childSolution,
-                                                                               SOL_SCORE_TYPE) == scoreType:
+            if element.tag != TASKTAG or rs.getAttrValue(childSolution, SOL_SCORE_TYPE) == scoreType:
                 result, scoreItem, maxScoreItem = self.__solutionEvaluateAndPut(childSolution, task, parentOperator=(
                     parentOperator + '.' + operatorType) if parentOperator is not None else operatorType)
 

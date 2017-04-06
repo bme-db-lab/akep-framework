@@ -201,6 +201,9 @@ class channel:
                         ch['errorType'] = 'Channel time out'
                         ch['stop'] = str(time.time())
                         proc.kill()
+                        out, error = proc.communicate()
+                        self.logger.error(ch[CHANNEL_NAME_ATTR] + 'error: \n' + error)
+                        self.logger.error(ch[CHANNEL_NAME_ATTR] + 'output: \n' + out)
                         raise AKEPException(ERROR['SCRIPT']['TIME_EXPIRED'] + ch[CHANNEL_NAME_ATTR])
                     except PermissionError:
                         ch['stop'] = str(time.time())
