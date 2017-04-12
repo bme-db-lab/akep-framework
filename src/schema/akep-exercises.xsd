@@ -43,8 +43,9 @@
         <xs:sequence>
             <xs:element name="scoreAttr" type="scoreAttrType" maxOccurs="unbounded" minOccurs="0"/>
             <xs:element name="scoreCondition" type="scoreConditionType" maxOccurs="unbounded" minOccurs="0"/>
-            <xs:element name="scoreResult" type="scoreResultType" maxOccurs="unbounded" minOccurs="1"/>
+            <xs:element name="scoreResult" type="scoreResultType" maxOccurs="unbounded" minOccurs="0"/>
         </xs:sequence>
+        <xs:anyAttribute processContents="skip"/>
     </xs:complexType>
 
     <xs:complexType name="scriptType">

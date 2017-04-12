@@ -10,8 +10,6 @@
 
         $scope.AKEPData = [];
         $scope.AKEPController = {};
-        $scope.solvediMSc = 0;
-        $scope.iMScBaseSum = 0;
 
         $scope.listDateOptions = {
             weekday: "long", year: "numeric", month: "short",
@@ -107,15 +105,7 @@
                         });
                     }
 
-                    var maxBaseScore = $scope.rootAKEPData.score ? Number($scope.rootAKEPData.score.split('/')[1]) : 0;
-                    var solvedScore = $scope.rootAKEPData.score ? Number($scope.rootAKEPData.score.split('/')[0]) : 0;
-                    var scoreMinToiMSc = Math.round(maxBaseScore * 0.85);
-                    var iMScText = '**iMSc pont:** `';
-                    if ($scope.solvediMSc > 0 && solvedScore - $scope.solvediMSc >= scoreMinToiMSc) {
-                        iMScText += Math.min(10, Math.round(solvedScore / maxBaseScore * 100) - 85) + ' pont`\n\nCsak abban az esetben helyes a fenti érték, ha a tesztek minden feladatra el lettek készítve és helyes az AKÉP pontozás.\n\nJogosult az iMSc pontra, mert\n- Megoldott iMSc feladat: `' + $scope.solvediMSc + ' pont`\n- Minimum szükséges pontszám: `' + scoreMinToiMSc + ' pont`';
-                    } else {
-                        iMScText += '0 pont`, mert ' + ($scope.solvediMSc === 0 ? 'nem szerzett pontot (i)-vel jelölt feladatra.' : 'nem érte el az (i) jelű pontszámok nélkül a minimális ' + scoreMinToiMSc + ' pontot.');
-                    }
+                    var iMScText = '**iMSc pont:** `'  +  ($scope.rootAKEPData.iMscScore !== undefined ? $scope.rootAKEPData.iMscScore : '0') + '` pont';
                     $scope.rootAKEPData.infoArray = $scope.rootAKEPData.infoArray.concat(iMScText);
                     $scope.rootAKEPData.info = converter.makeHtml(
                         $scope.rootAKEPData.infoArray.join('\n')
@@ -371,6 +361,7 @@
                         newChild.info.push('**Nem feladatfüggő szankciók vagy bónuszpontok:**\n');
                         newChild.info = newChild.info.concat($scope.createBonusMinusText($scope.sancBon.general));
                     }
+                    newChild.iMscScore = root.attr('iMscScore')
                     $scope.rootAKEPData = newChild;
                 }
                 if (root.children('solution').length !== 0) {
@@ -396,10 +387,6 @@
             if (root.attr('resultScore') !== undefined && (root.attr('maxScore') !== undefined || root.attr('score') !== undefined)) {
                 var max = root.attr('maxScore') !== undefined ? root.attr('maxScore') : root.attr('score');
                 var min = root.attr('resultScore');
-                if (root.attr('imscNormal')) {
-                    $scope.solvediMSc += Math.min(Number(root.attr('imscNormal')), Number(min));
-                    $scope.iMScBaseSum += Number(root.attr('imscNormal'));
-                }
                 newChild.score = min + '/' + max;
                 newChild.color = $scope.createResultColor(min, max);
             }

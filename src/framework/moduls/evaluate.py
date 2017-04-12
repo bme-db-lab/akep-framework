@@ -84,7 +84,8 @@ class evaluate:
                     return
 
             for scoreResult in scoreSpecial.findall('scoreResult'):
-                score = eval(re.sub('\s+', ' ', self.repleaceAllSignFromText(scoreResult.text, scoreAttrs)).strip())
+                scoreResult.text = self.repleaceAllSignFromText(scoreResult.text, scoreAttrs)
+                score = eval(re.sub('\s+', ' ', scoreResult.text).strip())
                 addTo = scoreResult.get('addTo')
                 if scoreResult.get('type') is not None and addTo is None and scoreSpecial.getparent().tag != 'solution':
                     oldScore = scoreSpecial.getparent().get('resultScore')
@@ -133,12 +134,17 @@ class evaluate:
                 rs.setText(requiredOutput, taskOutput[0] if taskOutput[1] else 'Error: ' + str(taskOutput[0]))
             scoreItem, maxScoreItem = self.__evaluateAll(task)
             scoreItem = self.__dependencyCheck(task, scoreItem=scoreItem)[1]
-            score += scoreItem
-            maxScore += maxScoreItem
             rs.setAttr(task, 'resultScore', self.__formatScore(scoreItem))
             rs.setAttr(task, 'maxScore', self.__formatScore(maxScoreItem))
+
             if task.find('scoreSpecial') is not None:
                 self.scoreSpecialEvaluator(task.find('scoreSpecial'))
+                scoreItem = float(task.get('resultScore'))
+                maxScoreItem = float(task.get('maxScore'))
+
+            score += scoreItem
+            maxScore += maxScoreItem
+
         return score, maxScore
 
     def __formatScore(self, score, formatText='{0:.2f}'):
