@@ -140,7 +140,7 @@
         $scope.createResultColor = function (min, max) {
             var nmin = Number(min);
             var nmax = Number(max);
-            var result = nmin / nmax * 100;
+            var result = nmin > nmax ? 100 : nmin / nmax * 100;
             var hue = Math.floor(result * 120 / 100);
             var saturation = Math.floor(Math.abs(result - 50) / 50 * 100);
             return 'hsl(' + hue + ',' + saturation + '%,40%)';

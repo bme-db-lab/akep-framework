@@ -55,7 +55,7 @@ class evaluate:
             score = float(self.resultContent.resultXMLRoot.get('resultScore'))
             maxScore = float(self.resultContent.resultXMLRoot.get('maxScore'))
 
-        self.scoreToAnalyse = self.__formatScore(score / maxScore * 100)
+        self.scoreToAnalyse = score if maxScore == 0 else self.__formatScore(score / maxScore * 100)
 
     def repleaceAllSignFromText(self, text, valueStoreObject, sign='@'):
         for key, value in valueStoreObject.items():
