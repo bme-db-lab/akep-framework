@@ -1,6 +1,7 @@
 from moduls.schemaSpecificAttr import *
 from moduls.exceptions import *
 from moduls.resultContent import resultContent as rs
+from moduls.dataStore import dataStore as ds
 
 import collections
 import subprocess
@@ -167,7 +168,11 @@ class channel:
                             self.logger.info('Channel {} stop'.format(ch[CHANNEL_NAME_ATTR]))
                             if proc.poll() != 0:
                                 raise subprocess.SubprocessError(error)
-                            if CH_OUT_TASK_TYPE in ch:
+                            if CH_OUTPUT_TASK_TYPE in ch and ch[CH_OUTPUT_TASK_TYPE] == 'xml':
+                                ch['out'] = ds.stringToXMLTree(out.encode('utf-8'))
+                            elif CH_OUTPUT_TASK_TYPE in ch and ch[CH_OUTPUT_TASK_TYPE] == 'html':
+                                ch['out'] = ds.stringToHTMLTree(out.encode('utf-8'))
+                            elif CH_OUT_TASK_TYPE in ch:
                                 ch['out'] = self.chStringValidFn(re.sub('set feedback (on|off)', '',
                                                                         re.sub('(?!--#)--.*\n', '', out[out.find(
                                                                             '<tasks>'):out.find(
@@ -249,7 +254,7 @@ class channel:
                     return ch
         raise AKEPException('Not found channel {}'.format(name))
 
-    def getChannelTaskOutput(self, channelName, taskID, shouldError):
+    def getChannelTaskOutput(self, channelName, taskID, shouldError, element=None):
         """
         Public function to get channel task content
         return: text content, shouldError if it was an error else not shouldError
@@ -262,15 +267,45 @@ class channel:
                 if errorToTask is not None:
                     return (rs.getText(errorToTask), shouldError)
 
-            task = self.resultContent.get(element=ch['out'], tag=TASKTAG, attrName='n', attrValue=taskID)
+            if element is not None and element.get('xpath') is not None:
+                task = self.resultContent.getAll(element=ch['out'], findText=element.get('xpath'))
+                if not isinstance(task, list):
+                    return str(task), True
+                elif len(task) >= 1 and rs.isElementType(task[0]):
+                    result = []
+                    for t in task:
+                        channel.fillXmlResult(result, 'xml', t)
+                    self.logger.debug('\n'.join(result))
+                    return '\n'.join(result), True
+                elif len(task) >= 1:
+                    return '\n'.join(task), True
+                else:
+                    return '', True
+            elif CH_OUTPUT_TASK_TYPE in ch and (ch[CH_OUTPUT_TASK_TYPE] == 'xml' or ch[CH_OUTPUT_TASK_TYPE] == 'html'):
+                return rs.toStringFromElement(ch['out']).decode('utf-8'), True
+            else:
+                task = self.resultContent.get(element=ch['out'], tag=TASKTAG, attrName='n', attrValue=taskID)
+
             if task is None:
-                return (None, shouldError)
+                return None, shouldError
             # .. try check the errors which are catched by AKEP
             if rs.getAttrValue(task, TO_ELEMENT_ERROR_ATTR) is not None:
                 return rs.getAttrValue(task, TO_ELEMENT_ERROR_ATTR), shouldError
             # final there was not error
-            return (rs.getText(task), not shouldError)
-        return (ch['out'], True)
+            return rs.getText(task), not shouldError
+        return ch['out'], True
+
+    def fillXmlResult(result, prefix, node):
+        tagPrefix = '{0}/{1}'.format(prefix, node.tag)
+        for k, v in node.attrib.iteritems():
+            result.append('{0}/@{1}={2}'.format(tagPrefix, k, v))
+        if node.text is not None and node.text.strip() != '':
+            result.append('{0}/text()={1}'.format(tagPrefix, node.text))
+        children = list(node)
+        if children:
+            result.append('{0}/__len__={1}'.format(tagPrefix, len(children)))
+            for child in children:
+                channel.fillXmlResult(result, tagPrefix, child)
 
     def __createChannelOutputToTaskXML(self, taskInputStream, xmlTextList, prevXML, concatInnerInputToTaskInp):
         """

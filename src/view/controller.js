@@ -105,7 +105,7 @@
                         });
                     }
 
-                    var iMScText = '**iMSc pont:** `'  +  ($scope.rootAKEPData.iMscScore !== undefined ? $scope.rootAKEPData.iMscScore : '0') + '` pont';
+                    var iMScText = '**iMSc pont:** `' + ($scope.rootAKEPData.iMscScore !== undefined ? $scope.rootAKEPData.iMscScore : '0') + '` pont';
                     $scope.rootAKEPData.infoArray = $scope.rootAKEPData.infoArray.concat(iMScText);
                     $scope.rootAKEPData.info = converter.makeHtml(
                         $scope.rootAKEPData.infoArray.join('\n')
@@ -288,7 +288,7 @@
 
             if (root.children('output').length !== 0) {
                 var mustOutputs = [];
-                root.children('output').each(function () {
+                root.children('output:not([channelOutputToSolutionId])').each(function () {
                     var data = $(this).attr('style') !== undefined ? null : $scope.parseCSV($(this).text(), $scope.delimiter);
                     if (data === null) {
                         data = {
@@ -405,7 +405,8 @@
             if (root.attr('evaluateMode') !== undefined) {
                 newChild.solution = newChild.score === undefined;
                 newChild.ok = root.attr('result') === 'true';
-                var actOutput = outputs.filter('[channelName="' + root.attr('channelName') + '"]' + (root.attr('errorCheck') === '' ? '[errorCheck=""]' : '[errorCheck!=""]')).text().trim().toLowerCase().split('\n');
+                var channelOutputToSolutionId = outputs.filter('[channelOutputToSolutionId="' + String(root.attr('channelOutputToSolutionId')) + '"]');
+                var actOutput = (channelOutputToSolutionId.length !== 0 ? channelOutputToSolutionId : outputs.filter('[channelName="' + root.attr('channelName') + '"]' + (root.attr('errorCheck') === '' ? '[errorCheck=""]' : '[errorCheck!=""]'))).text().trim().toLowerCase().split('\n');
                 var separator = $scope.getSeparator(root.attr('evaluateMode'));
                 var actReq = separator ? root.text().trim().toLowerCase().split(separator) : [root.text().trim().toLowerCase()];
                 if (actReq[actReq.length - 1] === '') {

@@ -24,6 +24,7 @@
         <xs:attribute name="reference" type="xs:string"/>
         <xs:attribute name="reference-id" type="xs:string"/>
         <xs:attribute name="refChildrenFind" type="xs:string"/>
+        <xs:attribute name="refPlaceholder" type="xs:string"/>
     </xs:attributeGroup>
 
     <xs:complexType name="exerciseType">
@@ -45,7 +46,7 @@
             <xs:element name="scoreCondition" type="scoreConditionType" maxOccurs="unbounded" minOccurs="0"/>
             <xs:element name="scoreResult" type="scoreResultType" maxOccurs="unbounded" minOccurs="0"/>
         </xs:sequence>
-        <xs:anyAttribute processContents="skip"/>
+        <xs:attributeGroup ref="refernceAttrGroup"/>
     </xs:complexType>
 
     <xs:complexType name="scriptType">
@@ -58,6 +59,7 @@
         <xs:attribute name="fromChannel" type="xs:string"/>
         <xs:attribute name="entry" type="scriptEntryType" default="main"/>
         <xs:attribute name="inputType" type="inputTypeType"/>
+        <xs:attribute name="outputType" type="outputTypeType"/>
         <xs:attribute name="inputTo" type="xs:string"/>
         <xs:attribute name="noConAfterError" type="xs:string"/>
         <xs:attribute name="taskErrorHandle" type="xs:string"/>
@@ -88,6 +90,7 @@
         <xs:attribute name="opererator" type="operatorType"/>
         <xs:attribute name="errorCheck" type="xs:string"/>
         <xs:attribute name="evaluateArgs" type="xs:string"/>
+        <xs:attribute name="xpath" type="xs:string"/>
         <xs:attributeGroup ref="refernceAttrGroup"/>
         <xs:anyAttribute processContents="skip"/>
     </xs:complexType>
@@ -180,6 +183,12 @@
     <xs:simpleType name="inputTypeType">
         <xs:restriction base="xs:string">
             <xs:pattern value="inline|external|channelOutput"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="outputTypeType">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="xml|html"/>
         </xs:restriction>
     </xs:simpleType>
 

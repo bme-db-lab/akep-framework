@@ -18,6 +18,7 @@ CH_CHAIN_CONT_COND = 'continueCondStream'
 CH_ENTRY_ORDER = ['pre', 'con', 'main', 'post']
 CH_OUT_TOTASK = 'output'
 CH_OUT_TASK_TYPE = 'taskOutput'
+CH_OUTPUT_TASK_TYPE = 'outputType'
 FROM_CAHNNEL = 'fromChannel'
 SCRIPT_INPUT_TYPE = ['inline', 'external', 'channelOutput']
 CHANNEL_NAME_ATTR = 'name'

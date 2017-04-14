@@ -3,6 +3,7 @@ from moduls.exceptions import *
 from moduls.resultContent import resultContent
 import os
 from lxml import etree
+from lxml import html
 import json
 import collections
 import threading
@@ -99,6 +100,18 @@ class dataStore:
     def checkTaskChannelStringValid(self, text):
         try:
             return etree.fromstring(text, self.chSchemaParser)
+        except:
+            raise
+
+    def stringToXMLTree(text):
+        try:
+            return etree.fromstring(text)
+        except:
+            raise
+
+    def stringToHTMLTree(text):
+        try:
+            return html.fromstring(text)
         except:
             raise
 

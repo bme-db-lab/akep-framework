@@ -114,16 +114,16 @@ class resultContent:
         element = self.resultXMLRoot if element is None else element
         per = './/' if not direct else './'
         if findText is not None:
-            return element.findall(findText)
+            return element.xpath(findText)
         if attrValue is not None and attrName is not None:
-            return element.findall(
-                per + tag + '[@' + attrName + '="' + attrValue + '"]') if tag is not None else element.findall(
+            return element.xpath(
+                per + tag + '[@' + attrName + '="' + attrValue + '"]') if tag is not None else element.xpath(
                 per + '*[@' + attrName + '="' + attrValue + '"]')
         if attrName is not None:
-            return element.findall(per + tag + '[@' + attrName + ']') if tag is not None else element.findall(
+            return element.xpath(per + tag + '[@' + attrName + ']') if tag is not None else element.xpath(
                 per + '*[@' + attrName + ']')
         if tag is not None:
-            return element.findall(per + tag)
+            return element.xpath(per + tag)
         return []
 
     def get(self, tag=None, attrName=None, attrValue=None, element=None, findText=None, direct=False):

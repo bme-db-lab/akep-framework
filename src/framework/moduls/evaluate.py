@@ -39,6 +39,7 @@ class evaluate:
         self.logger = logger
         self.toAnalyse = []
         self.taskAnalyse = []
+        self.channelOutputToSolutionId = 0
 
     def run(self):
         """
@@ -185,6 +186,7 @@ class evaluate:
         # if solution has evaluateMode attr
         evulationMode = rs.getAttrValue(element, EVULATION_MODE_ATTR)
         if evulationMode is not None:
+            self.channelOutputToSolutionId += 1
             solID = ((parentOperator + '.') if parentOperator is not None else '') + str(
                 element.getparent().index(element))
             requiredSolution = re.sub('\s+', ' ', element.text).strip().lower()
@@ -192,14 +194,18 @@ class evaluate:
             # get a tuple: channel output or error text, output is failed to the actual task?
             taskOutput = self.getTaskOutputFn(rs.getAttrValue(element, SOLUTION_CH_NAME),
                                               rs.getAttrValue(task, TASK_ELEMENT_ID),
-                                              True if fromErrorStream is not None else False)
-            # if parent task does not contain the output from channel which is referenced by actual solution
-            taskOutputsToChannel = self.resultContent.getAll(element=task, tag=CH_OUT_TOTASK, attrName=SOLUTION_CH_NAME,
-                                                             attrValue=element.get(SOLUTION_CH_NAME), direct=True)
+                                              True if fromErrorStream is not None else False, element)
 
-            if len(taskOutputsToChannel) == 0 or len(taskOutputsToChannel) == 1 and rs.getAttrValue(
-                    taskOutputsToChannel[0], SOL_SHOULD_ERROR) != fromErrorStream:
-                newAttr = {SOLUTION_CH_NAME: rs.getAttrValue(element, SOLUTION_CH_NAME)}
+            taskOutputToChannel = None
+            for ch_out in task.xpath(CH_OUT_TOTASK+'[@channelOutputToSolutionId]'):
+                if ch_out.text == str(taskOutput[0]):
+                    taskOutputToChannel = ch_out
+                    break
+
+            if taskOutputToChannel is None:
+                element.set('channelOutputToSolutionId', str(self.channelOutputToSolutionId))
+                newAttr = {SOLUTION_CH_NAME: rs.getAttrValue(element, SOLUTION_CH_NAME),
+                           'channelOutputToSolutionId': str(self.channelOutputToSolutionId)}
 
                 if fromErrorStream is not None:
                     newAttr[SOL_SHOULD_ERROR] = ''
@@ -207,6 +213,9 @@ class evaluate:
                 taskOutputElement = rs.createElement(CH_OUT_TOTASK, newAttr)
                 rs.setText(taskOutputElement, taskOutput[0] if taskOutput[1] else 'Error: ' + str(taskOutput[0]))
                 rs.appendTo(taskOutputElement, task)
+            else:
+                element.set('channelOutputToSolutionId', taskOutputToChannel.get('channelOutputToSolutionId'))
+
             score = 0 if rs.getAttrValue(element, SCORE_ATTR) is None else float(rs.getAttrValue(element, SCORE_ATTR))
             try:
                 # if channel output not failed to actual task or we would like to evaluate the error
