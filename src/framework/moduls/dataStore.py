@@ -106,14 +106,14 @@ class dataStore:
     def stringToXMLTree(text):
         try:
             return etree.fromstring(text)
-        except:
-            raise
+        except Exception as error:
+            return etree.fromstring('<error><![CDATA['+str(error)+']]></error>')
 
     def stringToHTMLTree(text):
         try:
             return html.fromstring(text)
-        except:
-            raise
+        except Exception as error:
+            return etree.fromstring('<error><![CDATA[' + str(error) + ']]></error>')
 
     def openFileWithCheck(self, path, loader=None):
         """
