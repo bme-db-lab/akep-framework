@@ -55,11 +55,10 @@ class dataStore:
             result = commandDict[key]
         elif exerciseRoot is not None:
             exerciseDict = collections.defaultdict(list)
-            exerciseKeysNode = exerciseRoot.find('.//' + EXERCISE_VARIABLES)
-            if exerciseKeysNode is not None:
-                for exerciseKey in exerciseKeysNode:
-                    if exerciseKey.get('key') is not None:
-                        exerciseDict[exerciseKey.get('key')].append(exerciseKey.text)
+            exerciseKeysNode = exerciseRoot.xpath('.//' + EXERCISE_VARIABLES+'/Key')
+            for exerciseKey in exerciseKeysNode:
+                if exerciseKey.get('key') is not None:
+                    exerciseDict[exerciseKey.get('key')].append(exerciseKey.text)
             if key in exerciseDict:
                 result = exerciseDict[key][0] if len(exerciseDict[key]) == 1 else exerciseDict[key]
 
