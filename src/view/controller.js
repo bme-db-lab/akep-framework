@@ -551,6 +551,7 @@
                 }
 
                 newChild.reqTypeText = $scope.formalRequiremensType(root.attr('evaluateMode'));
+                newChild.reqOnXPath = root.attr('xpath');
                 newChild.required = $scope.createRequiredOutput(actReq, successReq, root.attr('evaluateMode') === 'cellData');
                 newChild.cellType = root.attr('evaluateMode') === 'cellData' && result.length !== 0;
                 newChild.header = newChild.cellType && result.length !== 0 ? relevantActOutput[0] : null;
