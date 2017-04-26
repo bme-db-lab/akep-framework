@@ -297,6 +297,8 @@ class channel:
 
     def fillXmlResult(result, prefix, node):
         tagPrefix = '{0}/{1}'.format(prefix, node.tag)
+        # print tag itself, otherwise tags with no attribute nor text() nor children would be suppressed
+        result.append(tagPrefix)
         for k, v in node.attrib.iteritems():
             result.append('{0}/@{1}={2}'.format(tagPrefix, k, v))
         if node.text is not None and node.text.strip() != '':
