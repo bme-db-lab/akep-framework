@@ -185,7 +185,7 @@ class channel:
                                     out, None)
                                 ch['error'], nothing = self.__createChannelOutputToTaskXML(ch['taskInput'], error,
                                                                                            ch['error'],
-                                                                                           concatInnerInputToTaskInp) if 'taskErrorHandle' in ch else (
+                                                                                           concatInnerInputToTaskInp) if 'taskErrorHandle' in ch and 'taskInput' in ch else (
                                     error, None)
                             self.logger.debug('channel: {} out: {}'.format(ch[CHANNEL_NAME_ATTR],
                                                                            rs.toStringFromElement(ch['out']).decode(
@@ -240,10 +240,14 @@ class channel:
                                      range(lastRightIndex + 2, len(ch['taskInput']))])
                                 again = True
                         else:
-                            self.logger.error(str(err))
-                            ch['errorType'] = 'Call- or subprocess error'
-                            ch['stop'] = str(time.time())
-                            raise AKEPException('Error in script: ' + ch[CHANNEL_NAME_ATTR])
+                            if 'taskErrorHandle' in ch:
+                                ch['error'] = str(err)
+                                ch['out'] = str(err)
+                            else:
+                                self.logger.error(str(err))
+                                ch['errorType'] = 'Call- or subprocess error'
+                                ch['stop'] = str(time.time())
+                                raise AKEPException('Error in script: ' + ch[CHANNEL_NAME_ATTR])
                     ch['stop'] = str(time.time())
         self.terminateChannelScripts()
 
