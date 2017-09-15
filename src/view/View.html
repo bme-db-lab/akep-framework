@@ -98,6 +98,8 @@
 </div>
 <div class="content col-sm-7" ng-show="!doing_async && actBranch && !error">
     <div class="content-right">
+        <div ng-if="canRecheck" class="alert alert-warning"><button type="button" class="btn btn-primary" ng-click="reCheck()">Újraértékelés indítása</button></div>
+        <div ng-if="reCheckState" class="alert alert-warning">Jelenleg újraértékelés alatt</div>
         <div ng-if="actBranch.dependencies.length != 0" class="alert alert-info">
             <h3>Függőségek:</h3>
             <table>
@@ -121,7 +123,7 @@
         <div ng-show="actBranch.description" class="alert alert-success" ng-bind-html="actBranch.description"></div>
         <div ng-show="actBranch.required" class="alert alert-danger">
             <h3>Elvárás</h3>
-            <h5 ng-show="actBranch.reqOnXPath">Erre az XPath-ra vonatkozóan:  <b>{{actBranch.reqOnXPath}}</b></h5>
+            <h5 ng-show="actBranch.reqOnXPath">Erre az XPath-ra vonatkozóan: <b>{{actBranch.reqOnXPath}}</b></h5>
             <h4>{{actBranch.reqTypeText}}</h4>
             <table>
                 <tr>

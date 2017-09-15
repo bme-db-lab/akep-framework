@@ -1,5 +1,9 @@
 configGlobal = {
+    redirectHome:'',
     unauthorizedTOUrl:'',
     testDownload:'',
-    normalDownload:''
+    normalDownload:'',
+    allPreviousTests:'',
+    doRecheck: '',
+    canRecheck: ''
 };

@@ -4,7 +4,7 @@
         $sceProvider.enabled(false);
     });
     app.controller('AKEPViewTestController', function ($scope, $http) {
-        $scope.workTypes = ["2016", "Aktuális", "Egyedi"];
+        $scope.workTypes = ["Egyedi"];
         $scope.testStarted = false;
         $scope.progressStyle = 'info';
         $scope.success = false;
@@ -29,7 +29,8 @@
             $scope.progressStyle = 'danger';
             switch (response.status) {
                 case 401:
-                    $scope.errorContent = converter.makeHtml("A kért tartalomhoz nincs jogosultsága!\n\nLépjen be majd frissítsen!\n\n["+configGlobal.unauthorizedTOUrl+"]("+configGlobal.unauthorizedTOUrl+")");
+                    var redirect = configGlobal.redirectHome + encodeURIComponent(window.location.toString());
+                    window.location.replace(configGlobal.unauthorizedTOUrl + encodeURIComponent(redirect));
                     break;
                 case 404:
                     $scope.errorContent = "A kért tartalom nem elérhető!";
@@ -54,7 +55,7 @@
             if (response.data) {
                 $scope.status = 'Töltés';
                 $scope.testStarted = true;
-                $scope.pollTestResult(response.data);
+                $scope.pollTestResult(response.data.lastTestTS);
             }
             $scope.loadContent(function successCallback(response) {
                 var compare = function (a, b) {

@@ -38,6 +38,25 @@
             $scope.loadContent();
         });
 
+        $scope.reCheck = function () {
+            var url = window.location.hash.replace('#AKEPView/', '');
+            var akepResult = url.split('/');
+            if (akepResult[0] !== 'test' && akepResult.length === 2) {
+                $http({
+                    'method': 'post', 'url': configGlobal.doRecheck, 'data': {
+                        'neptun':akepResult[0],
+                        'labor':akepResult[1]
+                    }
+                }).then(function successCallback() {
+                    $scope.reCheckState = true;
+                }, function errorCallback(response) {
+                    console.log(response);
+                    $scope.canRecheck = true;
+                });
+                $scope.canRecheck = false;
+            }
+        };
+
         $scope.createListDate = function (timestamp) {
             if (timestamp.length > 13) {
                 timestamp = timestamp.substring(0, 13);
@@ -46,6 +65,8 @@
         };
 
         $scope.loadContent = function () {
+            $scope.canRecheck = false;
+            $scope.reCheckState = false;
             $scope.error = false;
             $scope.doing_async = true;
             var url = window.location.hash.replace('#AKEPView/', '');
@@ -57,11 +78,22 @@
 
             var akepResult = url.split('/');
             var previousResults = "";
+            var urlSolTag = "";
             if (akepResult[0] === 'test') {
                 url = configGlobal.testDownload + akepResult[1]
             } else {
-                url = configGlobal.normalDownload + (akepResult.length === 3 ? akepResult[1] + '/' + akepResult[2] + '/' + akepResult[0] : akepResult.join('/'));
-                previousResults = akepResult.length === 3 ? akepResult[1] + '/' + akepResult[2] : akepResult.join('/');
+                urlSolTag = akepResult.length === 3 ? akepResult[1] + '/' + akepResult[2] + '/' + akepResult[0] : akepResult.join('/');
+                url = configGlobal.normalDownload + urlSolTag;
+                previousResults = configGlobal.allPreviousTests + urlSolTag;
+
+                if (akepResult.length === 2) {
+                    $http({'method': 'get', 'url': configGlobal.canRecheck+urlSolTag})
+                        .then(function successCallback() {
+                           $scope.canRecheck = true;
+                        }, function errorCallBack(){
+                            $scope.reCheckState = true;
+                        });
+                }
             }
             $http({'method': 'get', 'url': url})
                 .then(function successCallback(response) {
@@ -80,11 +112,11 @@
                     if (previousResults) {
                         $http({
                             'method': 'get',
-                            'url': configGlobal.allPreviousTests + previousResults,
+                            'url': previousResults,
                             'headers': {'Content-Type': 'application/json'}
                         }).then(function successCallback(response) {
                             var previousResultsView = ['\n\n**Korábbi értékelések ehhez a hallgatóhoz:**'];
-                            response.data.forEach(function (prevResult) {
+                            response.data.solutions.forEach(function (prevResult) {
                                 var resultLink = '#AKEPView/';
                                 var resultText = '';
                                 if (akepResult[0] === prevResult) {
@@ -117,7 +149,8 @@
                     $scope.error = true;
                     switch (response.status) {
                         case 401:
-                            $scope.errorContent = converter.makeHtml("A kért tartalomhoz nincs jogosultsága!\n\nLépjen be majd frissítsen!\n\n[" + configGlobal.unauthorizedTOUrl + "](" + configGlobal.unauthorizedTOUrl + ")");
+                            var redirect = configGlobal.redirectHome + encodeURIComponent(window.location.toString());
+                            window.location.replace(configGlobal.unauthorizedTOUrl + encodeURIComponent(redirect));
                             break;
                         case 404:
                             $scope.errorContent = "A kért tartalom nem elérhető!";
