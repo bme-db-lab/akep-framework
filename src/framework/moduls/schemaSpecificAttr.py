@@ -26,6 +26,7 @@ CHANNEL_WITH_SHELL = 'withShell'
 # to evaluate system
 SCORE_TYPE = ['bonus', 'minus']
 SOLUTION_CH_NAME = 'channelName'
+REFERENCE_SOLUTION_CH_NAME = 'referenceChannelName'
 EVULATION_MODE_ATTR = 'evaluateMode'
 SOL_SCORE_TYPE = 'type'
 SCORE_ATTR = 'score'

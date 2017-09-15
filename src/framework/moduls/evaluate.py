@@ -197,7 +197,7 @@ class evaluate:
                                               True if fromErrorStream is not None else False, element)
 
             taskOutputToChannel = None
-            for ch_out in task.xpath(CH_OUT_TOTASK+'[@channelOutputToSolutionId]'):
+            for ch_out in task.xpath(CH_OUT_TOTASK + '[@channelOutputToSolutionId]'):
                 if ch_out.text == str(taskOutput[0]):
                     taskOutputToChannel = ch_out
                     break
@@ -220,9 +220,22 @@ class evaluate:
             try:
                 # if channel output not failed to actual task or we would like to evaluate the error
                 if taskOutput[1]:
-                    result = getattr(evaluateFunctions, evulationMode)(str(taskOutput[0]).strip().lower(),
-                                                                       requiredSolution,
-                                                                       rs.getAttrValue(element, SOL_OTHER_OPTION))
+                    if rs.getAttrValue(element, REFERENCE_SOLUTION_CH_NAME) is not None:
+                        referenceTaskOutput = self.getTaskOutputFn(rs.getAttrValue(element, REFERENCE_SOLUTION_CH_NAME),
+                                                                   rs.getAttrValue(task, TASK_ELEMENT_ID),
+                                                                   False, element)
+                        result, requiredString = evaluateFunctions.makeEvaluateWithReference(element.text.strip(), str(
+                            taskOutput[0]).strip().lower(), str(referenceTaskOutput[0]).strip().lower(),
+                                                                             rs.getAttrValue(element, SOL_OTHER_OPTION), self.logger)
+                        if result is not None:
+                            rs.setAttr(element, EVULATION_MODE_ATTR, element.text.strip())
+                        else:
+                            result = False
+                        element.text = requiredString
+                    else:
+                        result = getattr(evaluateFunctions, evulationMode)(str(taskOutput[0]).strip().lower(),
+                                                                           requiredSolution,
+                                                                           rs.getAttrValue(element, SOL_OTHER_OPTION))
                     # negate the result if solution has Negation attr
                     result = not result if rs.getAttrValue(element, SOL_NEGATION) is not None else result
                     self.toAnalyse.append(

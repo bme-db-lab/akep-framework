@@ -195,7 +195,7 @@
     <xs:simpleType name="evaluateModeType">
         <xs:restriction base="xs:string">
             <xs:pattern
-                    value="containAnd|containOr|regexpToInput|fromLog|ColumnsEqualParam|rowNumEq|rowNumGrEq|rowNumLtEq|cellData"/>
+                    value="containAnd|containOr|regexpToInput|fromLog|ColumnsEqualParam|rowNumEq|rowNumGrEq|rowNumLtEq|cellData|makeEvaluateWithReference"/>
         </xs:restriction>
     </xs:simpleType>
 
