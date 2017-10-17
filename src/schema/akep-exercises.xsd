@@ -52,6 +52,8 @@
     <xs:complexType name="scriptType">
         <xs:sequence>
             <xs:element name="inputstream" type="xs:string" maxOccurs="unbounded" minOccurs="0"/>
+            <xs:element name="limit" type="resourceType" maxOccurs="unbounded" minOccurs="0"/>
+            <xs:element name="monitoring" type="resourceType" maxOccurs="unbounded" minOccurs="0"/>
         </xs:sequence>
         <xs:attribute name="path" type="xs:string"/>
         <xs:attribute name="arguments" type="xs:string" use="required"/>
@@ -224,6 +226,15 @@
                 <xs:attribute name="type" type="scoreType"/>
                 <xs:attribute name="addTo" type="xs:string"/>
                 <xs:attribute name="id" type="xs:string"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:complexType name="resourceType">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+                <xs:attribute name="name" type="xs:string" use="required"/>
+                <xs:anyAttribute processContents="skip"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>

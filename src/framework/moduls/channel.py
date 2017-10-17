@@ -8,6 +8,9 @@ import subprocess
 import select
 import re
 import time
+import psutil
+import threading
+from lxml import etree
 
 '''
 Channel Modul
@@ -25,6 +28,7 @@ class channel:
         self.resultContent = resultContent
         self.logger = logger
         self.openList = []
+        self.monitoringThreadExitFlags = []
         # input channel schema validation function reference
         self.chStringValidFn = chStringValidFn
 
@@ -88,6 +92,58 @@ class channel:
                 inputs.append({'taskID': taskID, 'input': inputstream})
         return inputs
 
+    def addMonitoringThread(self, proc, procchannel, start_flag):
+        exit_flag = threading.Event()
+        t = threading.Thread(target=channel.run_limit_monitoring,
+                             args=(exit_flag, start_flag, proc, procchannel, self.logger))
+        t.start()
+        self.monitoringThreadExitFlags.append(exit_flag)
+
+    @staticmethod
+    def run_limit_monitoring(exit_flag, start_flag, proc, procchannel, logger):
+        try:
+            logger.debug('limit_monitoring init to channel {}'.format(procchannel.get('name')))
+            delay = float(procchannel.get('monitor_delay', 1))
+            limits = dict(zip(procchannel.xpath('./limit/@name'), procchannel.xpath('./limit/text()')))
+            monitoring = dict(zip(procchannel.xpath('./monitoring/@name'), procchannel.xpath('./monitoring/text()')))
+            for limit in limits:
+                proc.rlimit(psutil.__dict__[limit], (float(limits[limit]), float(limits[limit])))
+            for monitor in monitoring:
+                monitoring[monitor] = monitoring[monitor].split(',') if monitoring[monitor] != '*' else []
+            if len(monitoring) == 0:
+                return
+            logger.debug('limit_monitoring started to channel {}'.format(procchannel.get('name')))
+            monitoring_result = etree.Element('monitoringResult', attrib={'name': procchannel.get('name')})
+            procchannel.getparent().append(monitoring_result)
+            while True:
+                if exit_flag.wait(timeout=delay) or proc.poll() is not None:
+                    break
+                for monitor in monitoring:
+                    obj = getattr(proc, monitor)()
+                    start_flag.set()
+                    if hasattr(obj, '__dict__'):
+                        obj_dict = obj.__dict__ if len(monitoring[monitor]) == 0 else {k: v for k, v in
+                                                                                       obj.__dict__.items()
+                                                                                       if
+                                                                                       k in monitoring[monitor]}
+                        obj_dict = {k: str(v) for k, v in obj_dict.items()}
+                    else:
+                        obj_dict = dict()
+                        obj_dict['value'] = str(obj)
+
+                    obj_dict['timestamp'] = str(time.time())
+                    obj_dict['name'] = monitor
+                    new_result = etree.Element('resultRow', attrib=obj_dict)
+                    monitoring_result.append(new_result)
+        except Exception as error:
+            monitoring_result = etree.Element('monitoringResult', attrib={'name': procchannel.get('name')})
+            procchannel.getparent().append(monitoring_result)
+            monitoring_result.text = error
+            logger.exception(error)
+        finally:
+            start_flag.set()
+            logger.debug('limit_monitoring stopped to channel {}'.format(procchannel.get('name')))
+
     def run(self):
         """
         Run all channels in definied order
@@ -129,10 +185,13 @@ class channel:
                                                                                          inputstream if 'taskInput' not in ch else (
                                                                                              concatInnerInputToTaskInp + taskInput)))
                         if entry == CH_ENTRY_ORDER[1]:
-                            proc = subprocess.Popen(' '.join(arguments) if CHANNEL_WITH_SHELL in ch else arguments,
-                                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                                    stderr=subprocess.PIPE, universal_newlines=True,
-                                                    shell=CHANNEL_WITH_SHELL in ch)
+                            proc = psutil.Popen(' '.join(arguments) if CHANNEL_WITH_SHELL in ch else arguments,
+                                                stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE, universal_newlines=True,
+                                                shell=CHANNEL_WITH_SHELL in ch)
+                            start_flag = threading.Event()
+                            self.addMonitoringThread(proc, ch['node'], start_flag)
+                            start_flag.wait()
                             if inputstream != '':
                                 proc.stdin.write(inputstream)
                                 proc.stdin.close()
@@ -157,11 +216,14 @@ class channel:
                                 raise subprocess.SubprocessError('Contionous channel is dead')
                         else:
                             # run subprocess
-                            proc = subprocess.Popen(' '.join(arguments) if CHANNEL_WITH_SHELL in ch else arguments,
-                                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                                    stderr=subprocess.PIPE, universal_newlines=True,
-                                                    shell=CHANNEL_WITH_SHELL in ch)
+                            proc = psutil.Popen(' '.join(arguments) if CHANNEL_WITH_SHELL in ch else arguments,
+                                                stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE, universal_newlines=True,
+                                                shell=CHANNEL_WITH_SHELL in ch)
                             self.openList.append({'proc': proc, 'chName': ch[CHANNEL_NAME_ATTR], 'entry': entry})
+                            start_flag = threading.Event()
+                            self.addMonitoringThread(proc, ch['node'], start_flag)
+                            start_flag.wait()
                             out, error = proc.communicate(input=(
                                 inputstream if 'taskInput' not in ch else (concatInnerInputToTaskInp + taskInput)),
                                 timeout=60)
@@ -299,11 +361,12 @@ class channel:
             return rs.getText(task), not shouldError
         return ch['out'], True
 
+    @staticmethod
     def fillXmlResult(result, prefix, node):
         tagPrefix = '{0}/{1}'.format(prefix, node.tag)
         # print tag itself, otherwise tags with no attribute nor text() nor children would be suppressed
         result.append(tagPrefix)
-        for k, v in node.attrib.iteritems():
+        for k, v in node.attrib.items():
             result.append('{0}/@{1}={2}'.format(tagPrefix, k, v))
         if node.text is not None and node.text.strip() != '':
             result.append('{0}/text()={1}'.format(tagPrefix, node.text))
@@ -354,6 +417,9 @@ class channel:
         """
         Public function to terminate/kill openned subprocessors
         """
+        if hasattr(self, 'monitoringThreadExitFlags'):
+            for flag in self.monitoringThreadExitFlags:
+                flag.set()
         if hasattr(self, 'openList'):
             for item in self.openList:
                 if not killIt:

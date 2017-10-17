@@ -32,7 +32,6 @@ def ColumnsEqualParamTransformFromTable(referenceCh, args, inputCh, logger):
 def cellDataTransform(referenceCh, args, inputCh, logger):
     params = getDictFromArgs(args)
     transformMode = params['checkType'][0] if len(params['checkType']) == 1 else None
-    # columnIndex = params['columnIndex'][0] if len(options['columnIndex']) == 1 else None
     rows = referenceCh.replace('"', '').split('\n')
     if len(rows) == 0:
         return True, 'No required input'
@@ -47,7 +46,6 @@ def cellDataTransform(referenceCh, args, inputCh, logger):
             res = (str(i) if transformMode in ['totally', 'subsetTotally'] else '*') + ',*::' + row
             result.append(res)
             i += 1
-            # logger.debug(res)
         return True, '|||'.join(result)
     return False, 'Not valid transform mode: {}'.format(transformMode)
 
