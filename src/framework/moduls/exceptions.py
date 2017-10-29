@@ -20,6 +20,9 @@ ERROR = {
         'TIME_EXPIRED': 'Time expired, script: ',
         'NOT_VALID_VALUE': 'Not valid value in {} key from script {}'
     },
+    'SCHEMA': {
+        'WRONG_SYNTAX': 'Not well formed task schema, details: {}'
+    },
     'GENERAL': {
         'MISSING_TO_START': 'Fail load AKÉP global configuration JSON file or exercise descriptor schema. See akep.log for details.',
         'AKEP_REQUIRED_FAIL': 'AKEP requered things are incorrect, details: ',

@@ -36,7 +36,7 @@ class dataStore:
 
         self.schemaParser = etree.XMLParser(schema=etree.XMLSchema(self.schema))
         if chSchema is not None:
-            self.chSchemaParser = etree.XMLParser(schema=etree.XMLSchema(chSchema))
+            self.chSchemaParser = etree.XMLParser(schema=etree.XMLSchema(chSchema), huge_tree=True, encoding='utf8')
 
     def isReady(self):
         return self.globalConf and self.schema
@@ -99,8 +99,8 @@ class dataStore:
     def checkTaskChannelStringValid(self, text):
         try:
             return etree.fromstring(text, self.chSchemaParser)
-        except:
-            raise
+        except Exception as err:
+            raise AKEPException(ERROR['SCHEMA']['WRONG_SYNTAX'].format(str(err)))
 
     def stringToXMLTree(text):
         try:
