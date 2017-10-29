@@ -111,17 +111,6 @@ class evaluate:
         Recursive function to start evaluate recursive function from all task element
         and sum scores
         """
-        # if task has solution element
-        if self.resultContent.get(element=taskElement, tag=SOLUTION_TAG, direct=True) is not None:
-            # three score tree
-            normalResult = self.__solutionEvaluateAndPut(taskElement, taskElement)
-            bonusResult = self.__solutionEvaluateAndPut(taskElement, taskElement, SCORE_TYPE[0])
-            minusResult = self.__solutionEvaluateAndPut(taskElement, taskElement, SCORE_TYPE[1])
-            # ... and the result is
-            # formal: score, max score (without minus or plus)
-            score = normalResult[1] + bonusResult[1] - minusResult[1], normalResult[2]
-            self.taskAnalyse.append([rs.getAttrValue(taskElement, 'n'), str(score[0]), str(score[1])])
-            return score[0], score[1]
 
         score = 0
         maxScore = 0
@@ -145,6 +134,18 @@ class evaluate:
 
             score += scoreItem
             maxScore += maxScoreItem
+
+        # if task has solution element
+        if self.resultContent.get(element=taskElement, tag=SOLUTION_TAG, direct=True) is not None:
+            # three score tree
+            normalResult = self.__solutionEvaluateAndPut(taskElement, taskElement)
+            bonusResult = self.__solutionEvaluateAndPut(taskElement, taskElement, SCORE_TYPE[0])
+            minusResult = self.__solutionEvaluateAndPut(taskElement, taskElement, SCORE_TYPE[1])
+            # ... and the result is
+            # formal: score, max score (without minus or plus)
+            score = normalResult[1] + bonusResult[1] - minusResult[1], normalResult[2]
+            self.taskAnalyse.append([rs.getAttrValue(taskElement, 'n'), str(score[0]), str(score[1])])
+            return score[0], score[1]
 
         return score, maxScore
 
