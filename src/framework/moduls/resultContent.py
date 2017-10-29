@@ -44,6 +44,28 @@ class resultContent:
             self.referenceProcessor(element, element.get(REFERENCE_EXERCISE), element.get(REFERENCE_ID),
                                     element.get(REF_CHILDREN_FIND))
 
+        moveElements = []
+        for moveType in ['moveBeforeTo', 'moveAfterTo', 'moveOverrideTo']:
+            for el in self.getAll(attrName=moveType):
+                target = self.getAll(findText=el.get(moveType))
+                if len(target) != 1:
+                    el.set(TO_ELEMENT_ERROR_ATTR, 'ReferenceError')
+                else:
+                    moveElements.append({
+                        'el': el,
+                        'type': moveType,
+                        'target': target[0]
+                    })
+
+        for moveEl in moveElements:
+            moveEl['el'].getparent().remove(moveEl['el'])
+            indexOfTargetEl = moveEl['target'].getparent().index(moveEl['target'])
+            moveEl['target'].getparent().insert(
+                indexOfTargetEl if moveEl['type'] != 'moveAfterTo' else (indexOfTargetEl + 1),
+                moveEl['el'])
+            if moveEl['type'] == 'moveOverrideTo':
+                moveEl['target'].getparent().remove(moveEl['target'])
+
     def referenceProcessor(self, element, referenceExercise, referenceWithinExercise=None, referenceChildrenFind=None):
         """
         Push referenced element as a element's child or replace the placeholder element
