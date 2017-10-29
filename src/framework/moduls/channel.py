@@ -2,6 +2,7 @@ from moduls.schemaSpecificAttr import *
 from moduls.exceptions import *
 from moduls.resultContent import resultContent as rs
 from moduls.dataStore import dataStore as ds
+import moduls.specificParser as specificParser
 
 import collections
 import subprocess
@@ -169,6 +170,14 @@ class channel:
                     else:
                         inputstream = (inputstream + '\n' + output) if inputstream != '' else output
 
+                if 'specialTaskInput' in ch:
+                    inputList = self.__xmlTaskInputToList(
+                        self.resultContent.getAll(tag=CH_INPUTSTREAM, attrName=SOLUTION_CH_NAME,
+                                                  attrValue=ch[CHANNEL_NAME_ATTR]))
+                    inputstream = getattr(specificParser, ch['specialTaskInput']).getTextToInput(inputstream,
+                                                                                                 self.chStringValidFn,
+                                                                                                 inputList, self.logger)
+
                 concatInnerInputToTaskInp = '' if inputstream == '' else inputstream + SEPARATOR_COMMUNICATE_TASK_END
 
                 arguments = (ch[CH_PATH] + ' ' + ch['arguments']).split()
@@ -235,11 +244,9 @@ class channel:
                             elif CH_OUTPUT_TASK_TYPE in ch and ch[CH_OUTPUT_TASK_TYPE] == 'html':
                                 ch['out'] = ds.stringToHTMLTree(out.encode('utf-8'))
                             elif CH_OUT_TASK_TYPE in ch:
-                                ch['out'] = self.chStringValidFn(re.sub('set feedback (on|off)', '',
-                                                                        re.sub('(?!--#)--.*\n', '', out[out.find(
-                                                                            '<tasks>'):out.find(
-                                                                            '</tasks>') + 8].replace('prompt', '')),
-                                                                        flags=re.DOTALL))
+                                ch['out'] = getattr(specificParser, ch[CH_OUT_TASK_TYPE]).getXMLToOutput(out,
+                                                                                                         self.chStringValidFn,
+                                                                                                         self.logger)
                             else:
                                 ch['out'], lastRightIndex = self.__createChannelOutputToTaskXML(ch['taskInput'], out,
                                                                                                 ch['out'],
