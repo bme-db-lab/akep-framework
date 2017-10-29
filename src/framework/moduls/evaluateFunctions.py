@@ -17,7 +17,12 @@ def getDictFromArgs(Args):
 
 
 def emptyTransform(referenceCh, args, inputCh, logger):
-    return True, re.escape(re.sub('\s+', ' ', referenceCh)).replace('\\ ', ' ')
+    params = getDictFromArgs(args)
+    transformMode = params['checkType'][0] if len(params['checkType']) == 1 else None
+    result = re.escape(re.sub('\s+', ' ', referenceCh)).replace('\\ ', ' ').split('\\;')
+    if transformMode == 'totally':
+        return True, ';'.join(['^'+item+'$' for item in result])
+    return True, ';'.join(result)
 
 
 def rowNumTransform(referenceCh, args, inputCh, logger):
@@ -43,6 +48,7 @@ def cellDataTransform(referenceCh, args, inputCh, logger):
         i = 0
         del rows[0]
         for row in rows:
+            row = re.escape(re.sub('\s+', ' ', row)).replace('\\ ', ' ')
             res = (str(i) if transformMode in ['totally', 'subsetTotally'] else '*') + ',*::' + row
             result.append(res)
             i += 1
@@ -98,7 +104,7 @@ def regexpToInput(input, param, args, fromTransform=False, logger=None):
     dictArgs = getDictFromArgs(args)
     for skipchar in dictArgs['skipchar']:
         input = input.replace(skipchar, '')
-    return re.search(param, input, re.DOTALL) if fromTransform is False else input == param
+    return re.search(param, input, re.DOTALL)
 
 
 def ColumnsEqualParam(input, param, args, fromTransform=False, logger=None):
