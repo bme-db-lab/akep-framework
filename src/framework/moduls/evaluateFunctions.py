@@ -33,6 +33,21 @@ def ColumnsEqualParamTransformFromTable(referenceCh, args, inputCh, logger):
     rows = referenceCh.split('\n')
     return True, rows[0].replace('"', '')
 
+def multiCellDataTransform(referenceCh, args, inputCh, logger):
+    params = getDictFromArgs(args)
+    tableSeparator = params['separator'] if 'separator' in params else '[-multi-]'
+    closeSeparator = params['closeSeparator'] if 'closeSeparator' in params else '[-close-]'
+    relevant = referenceCh.split(closeSeparator)
+    inputChRelevant = inputCh.split(closeSeparator)
+    tables = relevant[0].split(tableSeparator)
+    inputChTables = inputChRelevant[0].split(tableSeparator)
+    requires = []
+    for i, table in enumerate(tables):
+        result, requiredString = cellDataTransform(table.strip(), args, inputChTables[i].strip(), logger)
+        if result is False:
+            return False, requiredString
+        requires.append(requiredString)
+    return True, '||||'.join(requires)
 
 def cellDataTransform(referenceCh, args, inputCh, logger):
     params = getDictFromArgs(args)
@@ -59,8 +74,11 @@ def cellDataTransform(referenceCh, args, inputCh, logger):
 def makeEvaluateWithReference(evaluateFnName, inputCh, referenceCh, args, logger):
     evaluateFn = evaluateFns.get(evaluateFnName, None)
     if evaluateFn:
+        inputCh = inputCh.strip()
+        referenceCh = referenceCh.strip()
         result, requiredString = evaluateFnsTransform[evaluateFnName](referenceCh, args, inputCh, logger)
         if result:
+            requiredString = requiredString.strip()
             return evaluateFn(inputCh, requiredString, args, evaluateFnName == 'cellData', logger), requiredString
         return None, requiredString
     return None, 'There is not exist transform function to {} evaluate function'.format(evaluateFnName)
@@ -97,10 +115,10 @@ def regexpToInput(input, param, args, fromTransform=False, logger=None):
     if param == '':
         return False
     param = re.sub('\s+', '\s*', param) if fromTransform is False else param
-    if logger is not None:
-        logger.debug(input)
-        logger.debug(param)
-        logger.debug(input == param)
+    # if logger is not None:
+    #     logger.debug(input)
+    #     logger.debug(param)
+    #     logger.debug(True if re.search(param, input, re.DOTALL) is not None else None)
     dictArgs = getDictFromArgs(args)
     for skipchar in dictArgs['skipchar']:
         input = input.replace(skipchar, '')
@@ -146,6 +164,18 @@ def rowNumLtEq(input, param, args, fromTransform=False, logger=None):
     """
     return len(input.split('\n')) - 1 <= int(param)
 
+def multiCellData(input, param, args, fromTransform=False, logger=None):
+    params = getDictFromArgs(args)
+    tableSeparator = params['separator'] if 'separator' in params else '[-multi-]'
+    closeSeparator = params['closeSeparator'] if 'closeSeparator' in params else '[-close-]'
+    relevant = input.split(closeSeparator)
+    tables = relevant[0].split(tableSeparator)
+    requires = param.split('||||')
+    for i, table in enumerate(tables):
+        result = cellData(table.strip(), requires[i].strip(), args, fromTransform, logger)
+        if result is False:
+            return False
+    return True
 
 def cellData(input, param, args, fromTransform=False, logger=None):
     '''
@@ -230,10 +260,12 @@ evaluateFns = {
     'rowNumEq': rowNumEq,
     'rowNumGrEq': rowNumGrEq,
     'rowNumLtEq': rowNumLtEq,
-    'cellData': cellData
+    'cellData': cellData,
+    'multiCellData': multiCellData
 }
 evaluateFnsTransform = {
     'cellData': cellDataTransform,
+    'multiCellData': multiCellDataTransform,
     'containOr': emptyTransform,
     'containAnd': emptyTransform,
     'regexpToInput': emptyTransform,

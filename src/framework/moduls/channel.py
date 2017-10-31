@@ -38,8 +38,8 @@ class channel:
                 if script[CH_INPUT_TYPE] == SCRIPT_INPUT_TYPE[0]:
                     # inputstream from exercise.X.xml object's tasks
                     script['taskInput'] = self.__xmlTaskInputToList(
-                        self.resultContent.getAll(tag=CH_INPUTSTREAM, attrName=SOLUTION_CH_NAME,
-                                                  attrValue=script[CHANNEL_NAME_ATTR]))
+                        self.resultContent.getAll(findText='//task/' + CH_INPUTSTREAM + '[@' + SOLUTION_CH_NAME + '="' +
+                                                           script[CHANNEL_NAME_ATTR] + '"]'))
                 elif script[CH_INPUT_TYPE] == SCRIPT_INPUT_TYPE[1]:
                     if CH_EXT_PATH not in script:
                         raise AKEPException(ERROR['SCRIPT']['MISSING_PATH'] + script[CHANNEL_NAME_ATTR])
@@ -145,6 +145,25 @@ class channel:
             start_flag.set()
             logger.debug('limit_monitoring stopped to channel {}'.format(procchannel.get('name')))
 
+    def replaceInputWithChannelOutput(self, ch, inputstream):
+        if CH_INPUT_TYPE in ch and ch[CH_INPUT_TYPE] == SCRIPT_INPUT_TYPE[2]:
+            channelNames = ch[FROM_CAHNNEL].split(';')
+            channelTo = [None] * len(channelNames) if CH_INPUTTO not in ch or len(
+                ch[CH_INPUTTO].split(';')) != len(channelNames) else ch[CH_INPUTTO].split(';')
+            for i, chName in enumerate(channelNames):
+                refChOut = self.__getChannel(chName)
+                if refChOut == None or 'out' not in refChOut or refChOut['out'] == '':
+                    raise AKEPException(
+                        ERROR['NOT_FOUND']['CH_OR_CHOUT'].format(chName, ch[CHANNEL_NAME_ATTR]))
+                output = str(refChOut['out'])
+                if channelTo[i] is None:
+                    inputstream = (inputstream + '\n' + output) if inputstream != '' else output
+                else:
+                    ch['arguments'] = ch['arguments'].replace(channelTo[i], output)
+                    if inputstream != '':
+                        inputstream = inputstream.replace(channelTo[i], output)
+        return inputstream
+
     def run(self):
         """
         Run all channels in definied order
@@ -157,27 +176,18 @@ class channel:
                     taskInput = SEPARATOR_COMMUNICATE_TASK_END.join(inputItem['input'] for inputItem in ch['taskInput'])
                 inputstream = '\n'.join(ch[CH_INPUTSTREAM]) if CH_INPUTSTREAM in ch else ''
 
-                if CH_INPUT_TYPE in ch and ch[CH_INPUT_TYPE] == SCRIPT_INPUT_TYPE[2]:
-                    refChOut = self.__getChannel(ch[FROM_CAHNNEL])
-                    if refChOut == None or 'out' not in refChOut or refChOut['out'] == '':
-                        raise AKEPException(
-                            ERROR['NOT_FOUND']['CH_OR_CHOUT'].format(ch[FROM_CAHNNEL], ch[CHANNEL_NAME_ATTR]))
-                    output = str(refChOut['out'])
-                    if CH_INPUTTO in ch:
-                        ch['arguments'] = ch['arguments'].replace(ch[CH_INPUTTO], output)
-                        if inputstream != '':
-                            inputstream = inputstream.replace(ch[CH_INPUTTO], output)
-                    else:
-                        inputstream = (inputstream + '\n' + output) if inputstream != '' else output
+                inputstream = self.replaceInputWithChannelOutput(ch, inputstream)
 
                 if 'specialTaskInput' in ch:
                     inputList = self.__xmlTaskInputToList(
-                        self.resultContent.getAll(tag=CH_INPUTSTREAM, attrName=SOLUTION_CH_NAME,
-                                                  attrValue=ch[CHANNEL_NAME_ATTR]))
+                        self.resultContent.getAll(findText='//task/'+CH_INPUTSTREAM+'[@' + SOLUTION_CH_NAME + '="' +
+                                                  ch[CHANNEL_NAME_ATTR] + '"]'))
                     inputstream = getattr(specificParser, ch['specialTaskInput']).getTextToInput(inputstream,
                                                                                                  self.chStringValidFn,
                                                                                                  inputList, self.logger)
 
+                inputstream = self.replaceInputWithChannelOutput(ch, inputstream)
+                
                 concatInnerInputToTaskInp = '' if inputstream == '' else inputstream + SEPARATOR_COMMUNICATE_TASK_END
 
                 arguments = (ch[CH_PATH] + ' ' + ch['arguments']).split()

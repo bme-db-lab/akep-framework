@@ -10,7 +10,7 @@ class SQLTaskParser:
         for replaceItem in replaceToEmpty:
             text = re.sub(replaceItem, '', text)
         xmlContent = text[text.find('<tasks>'):text.find('</tasks>') + 8]
-        logger.debug(xmlContent)
+        # logger.debug(xmlContent)
         try:
             xmlContent = etree.fromstring(xmlContent, parser=etree.XMLParser(encoding='utf8', huge_tree=True))
         except Exception as err:
@@ -30,7 +30,7 @@ class SQLTaskParser:
             raise AKEPException('Not well formed task schema, details: {}'.format('not found close tasks element'))
         postText = text[tasksStopIndex + 8:]
         relevantText = text[tasksStartIndex:tasksStopIndex + 8]
-        logger.debug(relevantText)
+        # logger.debug(relevantText)
         findStartIndex = 0
         while True:
             findStartIndex = relevantText.find('<tasks>' if findStartIndex == 0 else '</task>', findStartIndex)
@@ -55,7 +55,7 @@ class SQLTaskParser:
             relevantText = relevantText[:findStartIndex] + insertText + relevantText[findStopIndex:]
             findStartIndex += len(insertText)
         relevantText = relevantText.replace('prompt', '')
-        logger.debug(relevantText)
+        # logger.debug(relevantText)
         xmlContent = checkChSintaxFn(relevantText)
 
         for task in insertTasksList:
