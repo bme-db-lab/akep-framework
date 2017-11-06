@@ -36,7 +36,7 @@
             <xs:element name="exerciseKeys" type="exerciseKeysType" maxOccurs="1" minOccurs="0"/>
             <xs:element name="scoreSpecial" type="scoreSpecialType" maxOccurs="1" minOccurs="0"/>
             <xs:element name="info" type="infoType" maxOccurs="1" minOccurs="0"/>
-            <xs:any minOccurs="0" namespace="##any" processContents="skip"/>
+            <xs:any minOccurs="0" maxOccurs="unbounded" namespace="##any" processContents="skip"/>
             <xs:element name="task" type="taskType" maxOccurs="unbounded" minOccurs="0"/>
         </xs:sequence>
         <xs:attributeGroup ref="refernceAttrGroup"/>
@@ -69,6 +69,7 @@
         <xs:attribute name="noConAfterError" type="xs:string"/>
         <xs:attribute name="taskErrorHandle" type="xs:string"/>
         <xs:attribute name="specialTaskInput" type="xs:string"/>
+        <xs:attribute name="parserConfig" type="xs:string"/>
         <xs:attribute name="continueCondStream" type="continueCondStreamType"/>
         <xs:attributeGroup ref="refernceAttrGroup"/>
         <xs:anyAttribute processContents="skip"/>
