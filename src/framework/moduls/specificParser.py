@@ -64,7 +64,7 @@ class SQLTaskParser:
             newTask.text = etree.CDATA(task['input'])
             xmlContent.append(newTask)
 
-        if parserConfig is not None and 'order' in parserConfig.xpath('order'):
+        if parserConfig is not None and len(parserConfig.xpath('order')):
             result = ''
             orderList = [item.strip() for item in parserConfig.xpath('order')[0].text.split(';')]
             for orderItem in orderList:
