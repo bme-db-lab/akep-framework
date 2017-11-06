@@ -180,14 +180,18 @@ class channel:
 
                 if 'specialTaskInput' in ch:
                     inputList = self.__xmlTaskInputToList(
-                        self.resultContent.getAll(findText='//task/'+CH_INPUTSTREAM+'[@' + SOLUTION_CH_NAME + '="' +
-                                                  ch[CHANNEL_NAME_ATTR] + '"]'))
-                    inputstream = getattr(specificParser, ch['specialTaskInput']).getTextToInput(inputstream,
-                                                                                                 self.chStringValidFn,
-                                                                                                 inputList, self.logger)
+                        self.resultContent.getAll(findText='//task/' + CH_INPUTSTREAM + '[@' + SOLUTION_CH_NAME + '="' +
+                                                           ch[CHANNEL_NAME_ATTR] + '"]'))
+                    inputstream = getattr(specificParser, ch['specialTaskInput']).getTextToInput(
+                        inputstream,
+                        self.chStringValidFn,
+                        inputList,
+                        self.logger,
+                        self.resultContent.get('parserConfig', 'name',
+                                               ch['parserConfig']) if 'parserConfig' in ch else None)
 
                 inputstream = self.replaceInputWithChannelOutput(ch, inputstream)
-                
+
                 concatInnerInputToTaskInp = '' if inputstream == '' else inputstream + SEPARATOR_COMMUNICATE_TASK_END
 
                 arguments = (ch[CH_PATH] + ' ' + ch['arguments']).split()
@@ -254,9 +258,12 @@ class channel:
                             elif CH_OUTPUT_TASK_TYPE in ch and ch[CH_OUTPUT_TASK_TYPE] == 'html':
                                 ch['out'] = ds.stringToHTMLTree(out.encode('utf-8'))
                             elif CH_OUT_TASK_TYPE in ch:
-                                ch['out'] = getattr(specificParser, ch[CH_OUT_TASK_TYPE]).getXMLToOutput(out,
-                                                                                                         self.chStringValidFn,
-                                                                                                         self.logger)
+                                ch['out'] = getattr(specificParser, ch[CH_OUT_TASK_TYPE]).getXMLToOutput(
+                                    out,
+                                    self.chStringValidFn,
+                                    self.logger,
+                                    self.resultContent.get('parserConfig', 'name',
+                                                           ch['parserConfig']) if 'parserConfig' in ch else None)
                             else:
                                 ch['out'], lastRightIndex = self.__createChannelOutputToTaskXML(ch['taskInput'], out,
                                                                                                 ch['out'],
