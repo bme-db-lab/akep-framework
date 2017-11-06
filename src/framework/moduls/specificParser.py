@@ -21,7 +21,7 @@ class SQLTaskParser:
 
     @staticmethod
     def getTextToInput(text, checkChSintaxFn, insertTasksList, logger, parserConfig):
-        SQLTaskParser.getXMLToOutput(text, checkChSintaxFn, logger)
+        SQLTaskParser.getXMLToOutput(text, checkChSintaxFn, logger, parserConfig)
         tasksStartIndex = text.find('prompt <tasks>')
         if tasksStartIndex == -1:
             raise AKEPException('Not well formed task schema, details: {}'.format('not found open tasks element'))
