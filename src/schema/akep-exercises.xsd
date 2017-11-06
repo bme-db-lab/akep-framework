@@ -36,6 +36,7 @@
             <xs:element name="exerciseKeys" type="exerciseKeysType" maxOccurs="1" minOccurs="0"/>
             <xs:element name="scoreSpecial" type="scoreSpecialType" maxOccurs="1" minOccurs="0"/>
             <xs:element name="info" type="infoType" maxOccurs="1" minOccurs="0"/>
+            <xs:element name="parserConfig" type="parserConfigType" maxOccurs="unbounded" minOccurs="0"/>
             <xs:any minOccurs="0" namespace="##any" processContents="skip"/>
             <xs:element name="task" type="taskType" maxOccurs="unbounded" minOccurs="0"/>
         </xs:sequence>
@@ -69,6 +70,7 @@
         <xs:attribute name="noConAfterError" type="xs:string"/>
         <xs:attribute name="taskErrorHandle" type="xs:string"/>
         <xs:attribute name="specialTaskInput" type="xs:string"/>
+        <xs:attribute name="parserConfig" type="xs:string"/>
         <xs:attribute name="continueCondStream" type="continueCondStreamType"/>
         <xs:attributeGroup ref="refernceAttrGroup"/>
         <xs:anyAttribute processContents="skip"/>
@@ -239,6 +241,22 @@
             <xs:extension base="xs:string">
                 <xs:attribute name="name" type="xs:string" use="required"/>
                 <xs:anyAttribute processContents="skip"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:complexType name="parserConfigType">
+        <xs:sequence>
+            <xs:element name="order" type="xs:string" maxOccurs="1" minOccurs="0"/>
+            <xs:element name="customInput" type="customInputType" maxOccurs="unbounded" minOccurs="0"/>
+        </xs:sequence>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="customInputType">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+                <xs:attribute name="name" type="xs:string" use="required"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>

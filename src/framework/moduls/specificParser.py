@@ -1,11 +1,12 @@
 import re
 from lxml import etree
 from moduls.exceptions import *
+import uuid
 
 
 class SQLTaskParser:
     @staticmethod
-    def getXMLToOutput(text, checkChSintaxFn, logger):
+    def getXMLToOutput(text, checkChSintaxFn, logger, parserConfig):
         replaceToEmpty = ['set feedback (on|off)', '(?!--#)--.*', 'prompt']
         for replaceItem in replaceToEmpty:
             text = re.sub(replaceItem, '', text)
@@ -19,8 +20,8 @@ class SQLTaskParser:
         return checkChSintaxFn(etree.tostring(xmlContent, encoding='utf8'))
 
     @staticmethod
-    def getTextToInput(text, checkChSintaxFn, insertTasksList, logger):
-        SQLTaskParser.getXMLToOutput(text, checkChSintaxFn, logger)
+    def getTextToInput(text, checkChSintaxFn, insertTasksList, logger, parserConfig):
+        SQLTaskParser.getXMLToOutput(text, checkChSintaxFn, logger, parserConfig)
         tasksStartIndex = text.find('prompt <tasks>')
         if tasksStartIndex == -1:
             raise AKEPException('Not well formed task schema, details: {}'.format('not found open tasks element'))
@@ -62,6 +63,21 @@ class SQLTaskParser:
             newTask = etree.Element('task', {'n': task['taskID']})
             newTask.text = etree.CDATA(task['input'])
             xmlContent.append(newTask)
+
+        if parserConfig is not None and len(parserConfig.xpath('order')):
+            result = ''
+            orderList = [item.strip() for item in parserConfig.xpath('order')[0].text.split(';')]
+            for orderItem in orderList:
+                findElement = xmlContent.xpath('//task[@n="{}"]'.format(orderItem))
+                findElementCustom = parserConfig.xpath('//customInput[@name="{}"]'.format(orderItem))
+                if len(findElementCustom):
+                    result += SQLTaskParser._getTaskElement(findElementCustom[0].text, uuid.uuid4())
+                elif len(findElement):
+                    result += SQLTaskParser._getTaskElement(findElement[0].text, orderItem)
+                else:
+                    logger.warning('Not found reference to task {}'.format(orderItem))
+
+            return preText + '<tasks>' + result + '</tasks>' + postText
 
         xslt_tree = etree.XML('''
         <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
