@@ -250,12 +250,13 @@
             <xs:element name="order" type="xs:string" maxOccurs="1" minOccurs="0"/>
             <xs:element name="customInput" type="customInputType" maxOccurs="unbounded" minOccurs="0"/>
         </xs:sequence>
+        <xs:attribute name="name" type="xs:string" use="required"/>
     </xs:complexType>
 
     <xs:complexType name="customInputType">
         <xs:simpleContent>
             <xs:extension base="xs:string">
-                <xs:attribute name="name" type="scoreType" use="required"/>
+                <xs:attribute name="name" type="xs:string" use="required"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
