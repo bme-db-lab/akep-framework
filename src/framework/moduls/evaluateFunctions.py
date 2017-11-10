@@ -26,7 +26,7 @@ def emptyTransform(referenceCh, args, inputCh, logger):
 
 
 def rowNumTransform(referenceCh, args, inputCh, logger):
-    return True, len(referenceCh.split('\n')) - 1
+    return True, str(len(referenceCh.split('\n')) - 1)
 
 
 def ColumnsEqualParamTransformFromTable(referenceCh, args, inputCh, logger):
