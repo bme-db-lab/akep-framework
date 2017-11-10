@@ -123,6 +123,9 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                     resultXMLRoot = rs.createElement(EXERCISE, {'status': status})
                     self.request.sendall(rs.toStringFromElement(resultXMLRoot))
                 return
+            if 'exit' in command:
+                server.shutdown()
+                return
 
             timestamp = store.getValueFromKH('timeStamp', command)
             akepProcess = AKEPProcess(command)
@@ -237,9 +240,8 @@ def asyncWorker():
 
         asyncWorkerQueue.task_done()
 
-
 def main():
-    global store, logpath, asyncWorkerQueue, asyncWorkerAnswerStates, asyncWorkerAnswerStatesLock
+    global store, logpath, asyncWorkerQueue, asyncWorkerAnswerStates, asyncWorkerAnswerStatesLock, server
 
     parser = argparse.ArgumentParser('AKEP')
     parser.add_argument('-p', '--path', metavar='PATH', help="AKEP local configuration file's path",
@@ -279,9 +281,11 @@ def main():
             server_thread.daemon = True
             server_thread.start()
             server_thread.join()
-            if asyncWorkerQueue:
-                asyncWorkerQueue.join()
         except (KeyboardInterrupt, SystemExit):
+            pass
+        except:
+            logger.exception(ERROR['UNEXPECTED']['AKEP_STOP'])
+        finally:
             server.shutdown()
             logger.info('Wait for server threads')
             server.join()
@@ -289,8 +293,6 @@ def main():
                 logger.info('Wait for worker threads')
                 asyncWorkerQueue.join()
             server.server_close()
-        except:
-            logger.exception(ERROR['UNEXPECTED']['AKEP_STOP'])
 
     logger.info('AKEP stopped')
 
