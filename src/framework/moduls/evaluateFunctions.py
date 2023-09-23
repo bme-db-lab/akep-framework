@@ -114,7 +114,7 @@ def regexpToInput(input, param, args, fromTransform=False, logger=None):
         return True
     if param == '':
         return False
-    param = re.sub('\s+', '\s*', param) if fromTransform is False else param
+    param = re.sub('\s+', '\\\s*', param) if fromTransform is False else param
     # if logger is not None:
     #     logger.debug(input)
     #     logger.debug(param)
