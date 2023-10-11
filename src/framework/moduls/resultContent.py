@@ -172,7 +172,7 @@ class resultContent:
         return element.text
 
     def setText(element, text):
-        element.text = text
+        element.text = etree.CDATA(text)
 
     def toStringFromElement(element):
         return etree.tostring(element, encoding="utf8")

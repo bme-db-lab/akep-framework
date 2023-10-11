@@ -13,7 +13,7 @@ class SQLTaskParser:
         xmlContent = text[text.find('<tasks>'):text.find('</tasks>') + 8]
         # logger.debug(xmlContent)
         try:
-            xmlContent = etree.fromstring(xmlContent, parser=etree.XMLParser(encoding='utf8', huge_tree=True))
+            xmlContent = etree.fromstring(xmlContent, parser=etree.XMLParser(encoding='utf8', huge_tree=True, strip_cdata=False))
         except Exception as err:
             raise AKEPException('Not well formed xml from channel, details: {}'.format(str(err)))
 

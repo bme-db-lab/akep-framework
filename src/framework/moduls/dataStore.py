@@ -36,7 +36,7 @@ class dataStore:
 
         self.schemaParser = etree.XMLParser(schema=etree.XMLSchema(self.schema))
         if chSchema is not None:
-            self.chSchemaParser = etree.XMLParser(schema=etree.XMLSchema(chSchema), huge_tree=True, encoding='utf8')
+            self.chSchemaParser = etree.XMLParser(schema=etree.XMLSchema(chSchema), huge_tree=True, encoding='utf8', strip_cdata=False)
 
     def isReady(self):
         return self.globalConf and self.schema
