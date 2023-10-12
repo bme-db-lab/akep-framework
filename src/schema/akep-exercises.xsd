@@ -38,6 +38,7 @@
             <xs:element name="info" type="infoType" maxOccurs="1" minOccurs="0"/>
             <xs:element name="parserConfig" type="parserConfigType" maxOccurs="unbounded" minOccurs="0"/>
             <xs:any minOccurs="0" namespace="##any" processContents="skip"/>
+            <xs:element name="extra-scoring" type="extraScoringType" maxOccurs="1" minOccurs="0"/>
             <xs:element name="task" type="taskType" maxOccurs="unbounded" minOccurs="0"/>
         </xs:sequence>
         <xs:attributeGroup ref="refernceAttrGroup"/>
@@ -51,6 +52,12 @@
             <xs:element name="scoreResult" type="scoreResultType" maxOccurs="unbounded" minOccurs="0"/>
         </xs:sequence>
         <xs:attributeGroup ref="refernceAttrGroup"/>
+    </xs:complexType>
+
+    <xs:complexType name="extraScoringType">
+        <xs:sequence>
+            <xs:element name="score" maxOccurs="unbounded" minOccurs="0"/>
+        </xs:sequence>
     </xs:complexType>
 
     <xs:complexType name="scriptType">
