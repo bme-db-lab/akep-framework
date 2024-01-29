@@ -3,6 +3,8 @@ __pycache__
 # AKÉP configuration + logs
 *.local.cfg
 *.log
+log
+akep.cfg
 
 # AKÉP WSGI + directory structure builder
 util
